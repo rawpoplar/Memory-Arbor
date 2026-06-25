@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tool, type Plugin } from "@opencode-ai/plugin";
+import { parse as parseYaml } from "yaml";
 import {
   archiveMemoryNode,
   buildMemoryInjectionView,
@@ -69,7 +70,7 @@ export const MemoryContextPlugin: Plugin = async () => {
     "memory-arbor",
   );
   const storeFile = join(base, "store.json");
-  const configFile = join(base, "config.json");
+  const configFile = join(base, "config.yaml");
   const frameFile = join(base, "context-frame.json");
 
   async function readJson(path: string): Promise<unknown | null> {
@@ -85,8 +86,21 @@ export const MemoryContextPlugin: Plugin = async () => {
     }
   }
 
+  async function readYaml(path: string): Promise<unknown | null> {
+    try {
+      return parseYaml(await readFile(path, "utf8")) ?? null;
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? error.code
+          : undefined;
+      if (code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
   async function readConfig(): Promise<MemoryConfig> {
-    return normalizeMemoryConfig(await readJson(configFile));
+    return normalizeMemoryConfig(await readYaml(configFile));
   }
 
   async function readStore(config: MemoryConfig): Promise<MemoryStore> {

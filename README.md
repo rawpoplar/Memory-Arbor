@@ -35,7 +35,7 @@ design.md                    当前设计和后续版本计划。
 每次请求的大致流程：
 
 1. OpenCode 准备原本要发送给模型的 messages。
-2. adapter 读取 `store.json`、`config.json` 和 `context-frame.json`。
+2. adapter 读取 `store.json`、`config.yaml` 和 `context-frame.json`。
 3. 外部 marker 清理已经记忆化或已丢弃的原始上下文。
 4. 剩余原始上下文成为临时工作区。
 5. 已装载的 memory slots 被插入 `<memory_frame>`。
@@ -53,6 +53,7 @@ plugins/
 skills/
 adapter-smoke.ts
 frame.ts
+config.example.yaml
 ```
 
 Windows 下 OpenCode 配置目录通常是：
@@ -71,9 +72,18 @@ Copy-Item "plugins" $target -Recurse -Force
 Copy-Item "skills" $target -Recurse -Force
 Copy-Item "adapter-smoke.ts" $target -Force
 Copy-Item "frame.ts" $target -Force
+Copy-Item "config.example.yaml" $target -Force
 ```
 
 复制后重启 OpenCode，让其重新加载 `plugins/memory-context.ts` 和 `skills/memory-context/SKILL.md`。
+
+如果要启用示例配置，可以把 `config.example.yaml` 复制到 Memory Arbor 状态目录并改名为 `config.yaml`：
+
+```powershell
+$state = Join-Path $env:USERPROFILE ".config\opencode\memory-arbor"
+New-Item -ItemType Directory -Force $state | Out-Null
+Copy-Item "config.example.yaml" (Join-Path $state "config.yaml") -Force
+```
 
 ## 本地状态
 
@@ -86,7 +96,7 @@ Copy-Item "frame.ts" $target -Force
 状态文件：
 
 - `store.json`：记忆树和 slots。
-- `config.json`：slots 和 token 预算配置。
+- `config.yaml`：slots 和 token 预算配置，支持中文注释。
 - `context-frame.json`：外部 markers 和最近一次临时工作区状态。
 
 后续版本会让这些路径可配置。

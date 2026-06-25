@@ -1,0 +1,117 @@
+# Memory Arbor 示例配置
+# -----------------------------------------------------------------------------
+# 使用方式：
+# 1. 将本文件复制到：
+#    %USERPROFILE%\.config\opencode\memory-arbor\config.yaml
+# 2. 按需要修改 slots、记忆区预算和临时工作区预算。
+# 3. 重启 OpenCode，让 memory-context 插件重新读取配置。
+#
+# 说明：
+# - 当前配置文件格式为 YAML，支持中文注释。
+# - 如果 config.yaml 不存在，插件会使用代码内置默认配置。
+# - token 估算当前是粗略估算，不等同于模型 tokenizer 的精确 token 数。
+# - 下面未被注释掉的字段都是当前 v0.3 已支持字段。
+
+# 记忆插槽配置。
+# slot 是每轮上下文中“记忆区”的逻辑分区。
+# 模型可以通过 memory_load_slot 将记忆节点装入某个 slot。
+# 每轮 messages.transform 会把已装载 slot 中的 active 节点拼入 <memory_frame>。
+slots:
+  # 长期用户画像和长期工作偏好。
+  # 适合保存：
+  # - 用户稳定偏好；
+  # - 长期项目约束；
+  # - 始终需要遵守的工作规则。
+  - name: "memory_profile"
+    purpose: "稳定用户偏好、长期工作规则和长期画像。"
+    # rootNodeId 限制该 slot 可装载的记忆树范围。
+    # 当前默认根节点 id 是 root。
+    rootNodeId: "root"
+    # 当前 slot 的预算上限。超过后不会删除节点，但剩余预算会显示为 0。
+    maxTokens: 3000
+
+  # 项目上下文。
+  # 适合保存：
+  # - 仓库路径；
+  # - 项目结构；
+  # - 架构边界；
+  # - 已确定的实现约定。
+  - name: "project_context"
+    purpose: "项目事实、路径、架构边界和实现约定。"
+    rootNodeId: "root"
+    maxTokens: 5000
+
+  # 当前任务状态。
+  # 适合保存：
+  # - 当前目标；
+  # - 已完成步骤；
+  # - 下一步动作；
+  # - 尚未解决的阻塞点。
+  - name: "task_state"
+    purpose: "当前任务目标、进展、下一步动作和阻塞点。"
+    rootNodeId: "root"
+    maxTokens: 4000
+
+  # 短期工作上下文。
+  # 适合保存：
+  # - 近期需要反复引用的信息；
+  # - 临时但对接下来几轮仍有价值的上下文；
+  # - 不适合进入长期画像或项目事实的短期记忆。
+  - name: "working_context"
+    purpose: "短期工作上下文，服务于接下来几轮对话。"
+    rootNodeId: "root"
+    maxTokens: 4000
+
+  # 你也可以增加新的 slot。
+  # 注意：
+  # - name 必须唯一。
+  # - rootNodeId 当前通常保持 root。
+  # - maxTokens 应根据总上下文预算保守设置。
+  #
+  # - name: "experiment_notes"
+  #   purpose: "实验记录、对比结论和临时观察。"
+  #   rootNodeId: "root"
+  #   maxTokens: 3000
+
+# 记忆区整体注入预算。
+# 这里控制所有 loaded slots 合计最多注入多少记忆内容。
+injection:
+  # 所有 slot 的记忆节点内容合计预算。
+  # 如果 loaded 节点太多，超过该上限的节点会被跳过，
+  # <memory_frame> 中会显示 memoryTruncated: true。
+  maxMemoryTokens: 12000
+
+# 临时工作区预算。
+# 临时工作区由未被 marker 清理的原始上下文组成。
+# 它不是永久记忆，模型应在压力升高时将有价值的旧 ref 打包成记忆节点。
+temporaryWorkspace:
+  # 临时工作区 token 预算。
+  # 当前 v0.3 超过预算时只提示模型处理，不自动裁剪。
+  maxTokens: 8000
+
+  # 压力提示比例。
+  # 例如 0.8 表示临时工作区达到 maxTokens 的 80% 时，
+  # <memory_frame> 会提示模型调用 memory_* 工具进行记忆化或清理。
+  pressureRatio: 0.8
+
+# 未来计划：路径配置。
+# -----------------------------------------------------------------------------
+# 下列字段当前 v0.3 不会读取，仅作为 v0.4 设计方向记录。
+# 未来会支持将 store、frame、profile 等路径从代码中移到配置文件。
+#
+# storage:
+#   # 记忆树和 slots 状态文件。
+#   storeFile: "%USERPROFILE%\\.config\\opencode\\memory-arbor\\store.json"
+#
+#   # marker 和临时工作区状态文件。
+#   frameFile: "%USERPROFILE%\\.config\\opencode\\memory-arbor\\context-frame.json"
+#
+#   # 当前配置文件路径。
+#   configFile: "%USERPROFILE%\\.config\\opencode\\memory-arbor\\config.yaml"
+#
+# adapter:
+#   # 宿主名称。当前仅实现 opencode。
+#   host: "opencode"
+#
+#   # 手动 profile 名称。未来可用于跨 session 关联同一组记忆。
+#   profile: "default"

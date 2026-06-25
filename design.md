@@ -79,7 +79,7 @@ v0.3 的核心原则：
 - `slots`
 - `version`
 
-### config.json
+### config.yaml
 
 保存配置：
 
@@ -88,7 +88,7 @@ v0.3 的核心原则：
 - `temporaryWorkspace.maxTokens`
 - `temporaryWorkspace.pressureRatio`
 
-如果文件不存在，使用默认配置。
+配置文件使用 YAML，支持中文注释。如果 `config.yaml` 不存在，adapter 会使用默认配置。
 
 ### context-frame.json
 
@@ -128,7 +128,7 @@ marker 状态：
 每轮请求前：
 
 1. OpenCode 准备完整 `output.messages`。
-2. `experimental.chat.messages.transform` 读取 `store.json`、`config.json`、`context-frame.json`。
+2. `experimental.chat.messages.transform` 读取 `store.json`、`config.yaml`、`context-frame.json`。
 3. 遍历所有 text parts。
 4. 如果 part 或区间命中 marker，则从本轮上传内容中删除。
 5. 未命中的内容保留原始 user/assistant 角色，形成 `temporary_workspace`。
@@ -213,12 +213,12 @@ marker 状态：
 
 ### v0.4：更系统的配置
 
-目标是让 Memory Arbor 的关键路径和预算可配置。
+目标是让 Memory Arbor 的关键路径、预算和 profile 更系统地可配置。
 
 计划内容：
 
-- 支持配置记忆树 store 路径。
-- 支持配置 context frame 路径。
+- 支持在 YAML 配置中配置记忆树 store 路径。
+- 支持在 YAML 配置中配置 context frame 路径。
 - 支持配置 memory slot 数量、名称、用途、预算。
 - 支持配置总记忆区预算和临时工作区预算。
 - 支持配置 OpenCode adapter 的默认工作目录和 profile。
