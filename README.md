@@ -127,3 +127,7 @@ memory-context adapter smoke passed
 - skill 只描述什么时候调用工具，不保存记忆。
 - OpenCode 专属的上下文投影逻辑属于 adapter。
 - marker 是外部状态，因为 `messages.transform` 只修改本轮请求视图，不会修改已保存的聊天历史。
+
+## 许可证
+
+本项目使用 Apache License 2.0，详见 [LICENSE](LICENSE)。
