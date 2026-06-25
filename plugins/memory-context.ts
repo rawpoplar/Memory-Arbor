@@ -146,7 +146,7 @@ export const MemoryContextPlugin: Plugin = async () => {
     tool: {
       memory_create_node: tool({
         description:
-          "Create one Memory Arbor Lite node in the host-independent memory tree.",
+          "Create one Memory Arbor node in the host-independent memory tree.",
         args: {
           title: schema.string().min(1).describe("Short memory node title."),
           summary: schema

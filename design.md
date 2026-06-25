@@ -1,8 +1,17 @@
-# Memory Arbor Lite v0.3 Design
+# Memory Arbor Design
 
 ## 目标
 
-Memory Arbor Lite 的目标是让模型在固定上下文预算下维护外部记忆，而不是依赖无限增长的原始对话历史。
+Memory Arbor 的目标是控制每次发送给模型服务器的实际上下文内容。
+
+它不依赖无限增长的原始对话历史，而是在每轮请求前重新组装固定预算内的上下文：
+
+- 记忆区：由外部记忆树中已装载的节点组成。
+- 临时工作区：由尚未记忆化、尚未丢弃的最近上下文组成。
+
+这样可以尽量支持长期使用单一会话，同时避免实际上传上下文超过设定预算。
+
+## 当前版本：v0.3
 
 v0.3 的核心原则：
 
@@ -32,11 +41,11 @@ v0.3 的核心原则：
 - 上下文 marker。
 - session/message/part 的宿主细节。
 
-这样后续 Codex、Claude Code、cc switch 可以通过各自 adapter 复用同一套记忆树。
+后续 Codex、Claude Code、cc switch 可以通过各自 adapter 复用同一套记忆树。
 
-### memory-context adapter
+### OpenCode adapter
 
-`memory-context` 是 OpenCode adapter。
+`plugins/memory-context.ts` 是当前 OpenCode adapter。
 
 它负责：
 
@@ -46,11 +55,11 @@ v0.3 的核心原则：
 - 根据外部 marker 清理已记忆化或已丢弃的原始上下文。
 - 将 loaded memory slots 和临时工作区状态写入 `<memory_frame>`。
 
-它不负责维护记忆树规则本身，记忆树操作仍然委托给 `memory-core`。
+它不维护记忆树规则本身，记忆树操作委托给 `memory-core`。
 
 ### skill
 
-skill 只负责指导模型什么时候调用工具。
+`skills/memory-context/SKILL.md` 只负责指导模型什么时候调用工具。
 
 它不保存状态，不实现记忆树，也不直接修改上下文。
 
@@ -189,7 +198,7 @@ marker 状态：
 
 默认不应标记最新用户消息，除非用户明确要求。
 
-## v0.3 不做的事情
+## 当前不做的事情
 
 - 不使用 `chat.message`、`experimental.text.complete`、`tool.execute.after` 作为主线事件日志。
 - 不在 `experimental.chat.system.transform` 注入记忆正文。
@@ -198,17 +207,74 @@ marker 状态：
 - 不自动把对话打包成记忆。
 - 不引入 Python 后端、SQLite 或服务进程。
 
+## 后续版本计划
+
+所有后续版本计划先记录在本文件中，再进入实现。
+
+### v0.4：更系统的配置
+
+目标是让 Memory Arbor 的关键路径和预算可配置。
+
+计划内容：
+
+- 支持配置记忆树 store 路径。
+- 支持配置 context frame 路径。
+- 支持配置 memory slot 数量、名称、用途、预算。
+- 支持配置总记忆区预算和临时工作区预算。
+- 支持配置 OpenCode adapter 的默认工作目录和 profile。
+
+默认配置仍然保持零配置可运行。
+
+### v0.5：记忆树搜索增强
+
+目标是让搜索能力属于记忆树核心，而不是放在 skill 外部临时拼接。
+
+计划内容：
+
+- 保持 `memory_search` 在 `memory-core` 内实现。
+- 增强按 title、summary、content、tags、treePath 的搜索。
+- 保留树路径和 breadcrumb，方便模型按树逐层查找。
+- 后续可加入节点 id 的树状数组或区间索引，让模型在记忆过多时能按大致 id 区间定位。
+
+短期仍以树结构搜索为主，当前规模下按树查找已经足够。
+
+### v0.6：大规模记忆存储
+
+目标是在记忆过多时减少一次性加载整棵树的成本。
+
+计划内容：
+
+- 将常用索引、目录摘要和节点正文拆开存储。
+- 只将模型使用到的记忆节点 load 到内存。
+- 未使用的节点正文保留在磁盘上。
+- 搜索阶段优先读取轻量索引，打开节点时再读取正文。
+
+这个方向暂不急迫；即使 JSON 文件达到较大体积，当前机器内存仍然够用。实现时优先保证接口稳定和数据安全。
+
+### 未来：多宿主 adapter
+
+目标是让同一套 `memory-core` 接入不同 AI 宿主。
+
+候选 adapter：
+
+- OpenCode。
+- Codex。
+- Claude Code。
+- cc switch。
+
+每个 adapter 只负责宿主上下文接管、工具暴露和本地配置映射，不修改 `memory-core` 的记忆树语义。
+
 ## 验证
 
-当前验证方式：
+在 `Memory-Arbor` 根目录运行：
 
 ```powershell
-node --check "Memory Arbor Lite\memory-core\index.ts"
-node --check "Memory Arbor Lite\memory-context\frame.ts"
-node --check "Memory Arbor Lite\memory-context\plugins\memory-context.ts"
-node --check "Memory Arbor Lite\memory-context\adapter-smoke.ts"
-node "Memory Arbor Lite\memory-core\smoke.ts"
-node "Memory Arbor Lite\memory-context\adapter-smoke.ts"
+node --check "memory-core\index.ts"
+node --check "frame.ts"
+node --check "plugins\memory-context.ts"
+node --check "adapter-smoke.ts"
+node "memory-core\smoke.ts"
+node "adapter-smoke.ts"
 ```
 
 关键验收点：

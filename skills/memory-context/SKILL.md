@@ -1,11 +1,11 @@
 ---
 name: memory-context
-description: Use Memory Arbor Lite memory tools to search, open, create, update, archive, move, load, verify, and mark external memory nodes and temporary context refs.
+description: Use Memory Arbor memory tools to search, open, create, update, archive, move, load, verify, and mark external memory nodes and temporary context refs.
 ---
 
 # Memory Context
 
-Use `memory_*` tools to work with external Memory Arbor Lite state. The memory tree is maintained by tools, and the OpenCode adapter projects loaded slots plus unmarked temporary workspace refs into the next request.
+Use `memory_*` tools to work with external Memory Arbor state. The memory tree is maintained by tools, and the OpenCode adapter projects loaded slots plus unmarked temporary workspace refs into the next request.
 
 ## Tools
 
