@@ -68,7 +68,7 @@ v0.3 的核心原则：
 默认目录：
 
 ```text
-C:\Users\rawpoplar\.config\opencode\memory-arbor-lite\
+%USERPROFILE%\.config\opencode\memory-arbor\
 ```
 
 ### store.json

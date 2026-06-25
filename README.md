@@ -80,7 +80,7 @@ Copy-Item "frame.ts" $target -Force
 当前 OpenCode adapter 的默认状态目录是：
 
 ```text
-C:\Users\rawpoplar\.config\opencode\memory-arbor-lite\
+%USERPROFILE%\.config\opencode\memory-arbor\
 ```
 
 状态文件：

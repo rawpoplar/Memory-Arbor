@@ -66,7 +66,7 @@ export const MemoryContextPlugin: Plugin = async () => {
     process.env.USERPROFILE || process.env.HOME || ".",
     ".config",
     "opencode",
-    "memory-arbor-lite",
+    "memory-arbor",
   );
   const storeFile = join(base, "store.json");
   const configFile = join(base, "config.json");
@@ -767,7 +767,7 @@ function insertMemoryFrame(messages: OpenCodeMessage[], text: string): void {
     text,
     synthetic: true,
     metadata: {
-      source: "memory-arbor-lite",
+      source: "memory-arbor",
     },
   });
 }
