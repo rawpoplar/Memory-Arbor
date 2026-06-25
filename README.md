@@ -9,6 +9,8 @@ Memory Arbor 是一个面向长时间 AI 对话的轻量级记忆与上下文控
 
 这样可以尽量支持长期使用单一会话，同时避免实际上传上下文超过设定预算。
 
+目前仅有opencode的experimental.chat.messages.transform钩子允许我们获取/修改实际上传到模型服务器的实际上下文，所以该项目目前是作为opencode的插件来使用的
+
 ## 当前状态
 
 当前设计版本是 v0.3。
@@ -40,6 +42,38 @@ design.md                    当前设计和后续版本计划。
 6. 模型最终只接收 memory frame 和未标记的临时工作区。
 
 之后模型可以通过 `memory_*` 工具搜索、创建、更新、装载和标记记忆。
+
+## 使用方法
+
+将项目中的以下文件和目录复制到 OpenCode 配置目录即可使用：
+
+```text
+memory-core/
+plugins/
+skills/
+adapter-smoke.ts
+frame.ts
+```
+
+Windows 下 OpenCode 配置目录通常是：
+
+```text
+%USERPROFILE%\.config\opencode
+```
+
+PowerShell 示例：
+
+```powershell
+$target = Join-Path $env:USERPROFILE ".config\opencode"
+New-Item -ItemType Directory -Force $target | Out-Null
+Copy-Item "memory-core" $target -Recurse -Force
+Copy-Item "plugins" $target -Recurse -Force
+Copy-Item "skills" $target -Recurse -Force
+Copy-Item "adapter-smoke.ts" $target -Force
+Copy-Item "frame.ts" $target -Force
+```
+
+复制后重启 OpenCode，让其重新加载 `plugins/memory-context.ts` 和 `skills/memory-context/SKILL.md`。
 
 ## 本地状态
 
