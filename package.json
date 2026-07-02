@@ -9,8 +9,8 @@
     "integrations/*"
   ],
   "scripts": {
-    "check": "node --check \"packages/core/src/index.ts\" && node --check \"packages/core/src/frame.ts\" && node --check \"packages/core/src/maintain.ts\" && node --check \"packages/core/smoke.ts\" && node --check \"packages/mcp/src/descriptor.ts\" && node --check \"integrations/opencode/src/plugin.ts\" && node --check \"adapter-smoke.ts\"",
-    "smoke": "node \"packages/core/smoke.ts\" && node \"adapter-smoke.ts\"",
+    "check": "node --check \"packages/core/src/index.ts\" && node --check \"packages/core/src/frame.ts\" && node --check \"packages/core/src/maintain.ts\" && node --check \"packages/mcp/src/descriptor.ts\" && node --check \"integrations/opencode/src/plugin.ts\" && node --check \"tests/core.test.ts\" && node --check \"tests/adapter.test.ts\"",
+    "smoke": "node \"tests/core.test.ts\" && node \"tests/adapter.test.ts\"",
     "sync:skills": "node \"scripts/sync-integration-skills.mjs\"",
     "test": "npm run check && npm run smoke"
   }

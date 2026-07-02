@@ -303,9 +303,10 @@ node --check "packages\core\src\frame.ts"
 node --check "packages\core\src\maintain.ts"
 node --check "packages\mcp\src\descriptor.ts"
 node --check "integrations\opencode\src\plugin.ts"
-node --check "adapter-smoke.ts"
-node "packages\core\smoke.ts"
-node "adapter-smoke.ts"
+node --check "tests\core.test.ts"
+node --check "tests\adapter.test.ts"
+node "tests\core.test.ts"
+node "tests\adapter.test.ts"
 ```
 
 关键验收点：

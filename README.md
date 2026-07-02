@@ -28,7 +28,7 @@ integrations/opencode/       OpenCode 完整版 adapter。
 integrations/codex/          Codex 降级插件壳。
 integrations/claude-code/    Claude Code 降级插件壳。
 skills/memory-context/       唯一手写 skill 源文件。
-adapter-smoke.ts             adapter 层 smoke 测试。
+tests/                       基于 node:test 的轻量正式测试。
 package.json                 workspace 和验证脚本入口。
 pnpm-workspace.yaml          workspace 结构声明。
 design.md                    当前设计和后续版本计划。
@@ -110,19 +110,15 @@ node --check "packages\core\src\frame.ts"
 node --check "packages\core\src\maintain.ts"
 node --check "packages\mcp\src\descriptor.ts"
 node --check "integrations\opencode\src\plugin.ts"
-node --check "adapter-smoke.ts"
-node "packages\core\smoke.ts"
-node "adapter-smoke.ts"
+node --check "tests\core.test.ts"
+node --check "tests\adapter.test.ts"
+node "tests\core.test.ts"
+node "tests\adapter.test.ts"
 ```
 
 `npm test` 等价于先运行 `check` 再运行 `smoke`。如果 PowerShell 执行策略拦截 `npm.ps1`，请使用 `npm.cmd test`。
 
-期望 smoke 输出：
-
-```text
-memory-core smoke passed
-memory-context adapter smoke passed
-```
+`smoke` 使用 Node 内置 `node:test`，不引入额外测试框架；当前脚本直接执行测试文件，避免受限环境下 `node --test` 派生子进程失败。
 
 ## 说明
 
