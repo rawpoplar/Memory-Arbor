@@ -28,6 +28,7 @@ skills/memory-context/       面向模型的记忆使用 skill。
 frame.ts                     外部 marker 和临时工作区辅助逻辑。
 maintain.ts                  组合维护工具和 system 维护提示的纯逻辑。
 adapter-smoke.ts             adapter 层 smoke 测试。
+package.json                 轻量验证脚本入口。
 design.md                    当前设计和后续版本计划。
 ```
 
@@ -110,6 +111,13 @@ Copy-Item "config.example.yaml" (Join-Path $state "config.yaml") -Force
 在仓库根目录运行：
 
 ```powershell
+npm.cmd run check
+npm.cmd run smoke
+```
+
+也可以直接运行：
+
+```powershell
 node --check "memory-core\index.ts"
 node --check "frame.ts"
 node --check "maintain.ts"
@@ -118,6 +126,8 @@ node --check "adapter-smoke.ts"
 node "memory-core\smoke.ts"
 node "adapter-smoke.ts"
 ```
+
+`npm test` 等价于先运行 `check` 再运行 `smoke`。如果 PowerShell 执行策略拦截 `npm.ps1`，请使用 `npm.cmd test`。
 
 期望 smoke 输出：
 

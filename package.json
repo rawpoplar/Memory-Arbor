@@ -1,0 +1,16 @@
+{
+  "name": "memory-arbor",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "check": "node --check \"memory-core/index.ts\" && node --check \"frame.ts\" && node --check \"maintain.ts\" && node --check \"plugins/memory-context.ts\" && node --check \"adapter-smoke.ts\"",
+    "smoke": "node \"memory-core/smoke.ts\" && node \"adapter-smoke.ts\"",
+    "test": "npm run check && npm run smoke"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.14.28",
+    "yaml": "^2.8.3"
+  }
+}

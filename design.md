@@ -267,11 +267,27 @@ marker 状态：
 - Claude Code。
 - cc switch。
 
-每个 adapter 只负责宿主上下文接管、工具暴露和本地配置映射，不修改 `memory-core` 的记忆树语义。
+OpenCode adapter 仍是完整接入：可以通过 hook 投影 messages，并用 system hook 注入维护提示。
+
+Codex、Claude Code 等 CLI 如果没有可用的完整上下文劫持 hook，则采用降级接入：
+
+- 只通过插件或宿主支持的提示词入口注入已装载记忆和维护说明。
+- 不尝试删除或改写宿主原始会话上下文。
+- 长会话增长由用户新开会话解决，新会话继续读取同一套 Memory Arbor store。
+- 仍复用 `memory-core` 的记忆树和 slot 语义。
+
+MCP 暂不作为接入主线。它可以增加工具和资源，但不能稳定修改或删除宿主上下文/提示词，因此不适合作为 Memory Arbor 的上下文控制层。
 
 ## 验证
 
 在 `Memory-Arbor` 根目录运行：
+
+```powershell
+npm.cmd run check
+npm.cmd run smoke
+```
+
+或者直接运行：
 
 ```powershell
 node --check "memory-core\index.ts"
