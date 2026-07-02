@@ -9,7 +9,7 @@ import {
   readMemorySlots,
   searchMemoryNodes,
   updateMemoryNode,
-} from "./index.ts"
+} from "./src/index.ts"
 
 function assert(condition: unknown, message: string): void {
   if (!condition) throw new Error(message)

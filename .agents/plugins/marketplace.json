@@ -1,0 +1,20 @@
+{
+  "name": "memory-arbor",
+  "interface": {
+    "displayName": "Memory Arbor"
+  },
+  "plugins": [
+    {
+      "name": "memory-arbor-codex",
+      "source": {
+        "source": "local",
+        "path": "./integrations/codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

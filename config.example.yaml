@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------
 # 使用方式：
 # 1. 将本文件复制到：
-#    %USERPROFILE%\.config\opencode\memory-arbor\config.yaml
+#    %USERPROFILE%\.memory-arbor\config.yaml
 # 2. 按需要修改 slots、记忆区预算和临时工作区预算。
 # 3. 重启 OpenCode，让 memory-context 插件重新读取配置。
 #
@@ -10,7 +10,7 @@
 # - 当前配置文件格式为 YAML，支持中文注释。
 # - 如果 config.yaml 不存在，插件会使用代码内置默认配置。
 # - token 估算当前是粗略估算，不等同于模型 tokenizer 的精确 token 数。
-# - 下面未被注释掉的字段都是当前 v0.3 已支持字段。
+# - 下面未被注释掉的字段都是当前 v0.4 已支持字段。
 
 # 记忆插槽配置。
 # slot 是每轮上下文中“记忆区”的逻辑分区。
@@ -86,7 +86,7 @@ injection:
 # 它不是永久记忆，模型应在压力升高时将有价值的旧 ref 打包成记忆节点。
 temporaryWorkspace:
   # 临时工作区 token 预算。
-  # 当前 v0.3 超过预算时只提示模型处理，不自动裁剪。
+  # 当前 v0.4 超过预算时只提示模型处理，不自动裁剪。
   maxTokens: 8000
 
   # 压力提示比例。
@@ -96,18 +96,18 @@ temporaryWorkspace:
 
 # 未来计划：路径配置。
 # -----------------------------------------------------------------------------
-# 下列字段当前 v0.3 不会读取，仅作为 v0.4 设计方向记录。
+# 下列字段当前 v0.4 不会读取，仅作为后续设计方向记录。
 # 未来会支持将 store、frame、profile 等路径从代码中移到配置文件。
 #
 # storage:
 #   # 记忆树和 slots 状态文件。
-#   storeFile: "%USERPROFILE%\\.config\\opencode\\memory-arbor\\store.json"
+#   storeFile: "%USERPROFILE%\\.memory-arbor\\store.json"
 #
 #   # marker 和临时工作区状态文件。
-#   frameFile: "%USERPROFILE%\\.config\\opencode\\memory-arbor\\context-frame.json"
+#   frameFile: "%USERPROFILE%\\.memory-arbor\\context-frame.json"
 #
 #   # 当前配置文件路径。
-#   configFile: "%USERPROFILE%\\.config\\opencode\\memory-arbor\\config.yaml"
+#   configFile: "%USERPROFILE%\\.memory-arbor\\config.yaml"
 #
 # adapter:
 #   # 宿主名称。当前仅实现 opencode。

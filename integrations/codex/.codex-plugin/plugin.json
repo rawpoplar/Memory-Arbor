@@ -1,0 +1,27 @@
+{
+  "name": "memory-arbor-codex",
+  "version": "0.4.0",
+  "description": "Memory Arbor downgraded Codex integration using shared skills and MCP tools.",
+  "license": "Apache-2.0",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Memory Arbor for Codex",
+    "shortDescription": "Prompt-only memory continuity with shared Memory Arbor tools",
+    "longDescription": "Use Memory Arbor memory tools and skills from Codex. This downgraded integration cannot rewrite or delete host conversation context; use a new session to continue from the shared memory store.",
+    "developerName": "rawpoplar",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Load relevant Memory Arbor context for this repository.",
+      "Continue from the shared Memory Arbor store."
+    ],
+    "websiteURL": "https://github.com/rawpoplar/memory-arbor",
+    "privacyPolicyURL": "https://github.com/rawpoplar/memory-arbor",
+    "termsOfServiceURL": "https://github.com/rawpoplar/memory-arbor",
+    "brandColor": "#276749",
+    "screenshots": []
+  }
+}

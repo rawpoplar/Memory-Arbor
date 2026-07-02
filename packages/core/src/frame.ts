@@ -1,4 +1,4 @@
-import { estimateTokens } from "./memory-core/index.ts";
+import { estimateTokens } from "./index.ts";
 
 export type ContextMarkerStatus = "memorized" | "discarded";
 export type ContextPressure = "normal" | "near_limit" | "over_limit";

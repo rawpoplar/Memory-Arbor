@@ -3,6 +3,8 @@ name: memory-context
 description: Use Memory Arbor memory tools to search, open, create, update, archive, move, load, verify, and mark external memory nodes and temporary context refs.
 ---
 
+Generated copy. Edit `skills/memory-context/SKILL.md` at the repository root, then resync integration skills.
+
 # Memory Context
 
 Use `memory_*` tools to work with external Memory Arbor state. The memory tree is maintained by tools. Full adapters can project loaded slots plus unmarked temporary workspace refs into the next request; downgraded adapters can still load memory through prompts and tools.

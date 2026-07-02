@@ -1,0 +1,14 @@
+{
+  "name": "memory-arbor-claude-code",
+  "version": "0.4.0",
+  "description": "Memory Arbor downgraded Claude Code integration using shared skills and MCP tools.",
+  "license": "Apache-2.0",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Memory Arbor for Claude Code",
+    "shortDescription": "Prompt-only memory continuity with shared Memory Arbor tools",
+    "longDescription": "Use Memory Arbor memory tools and skills from Claude Code. This downgraded integration cannot rewrite or delete host conversation context; use a new session to continue from the shared memory store.",
+    "developerName": "rawpoplar",
+    "category": "Developer Tools"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "memory-arbor": {
+      "command": "node",
+      "args": [
+        "../../packages/mcp/src/descriptor.ts"
+      ],
+      "env": {
+        "MEMORY_ARBOR_HOME": "${HOME}/.memory-arbor"
+      }
+    }
+  }
+}

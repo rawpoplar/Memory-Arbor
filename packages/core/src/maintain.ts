@@ -7,7 +7,7 @@ import {
   type MemoryNodeKind,
   type MemorySlot,
   type MemoryStore,
-} from "./memory-core/index.ts";
+} from "./index.ts";
 import {
   parseContextRef,
   sameContextTarget,

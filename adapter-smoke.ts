@@ -4,18 +4,18 @@ import {
   createMemoryNode,
   defaultMemoryConfig,
   loadMemorySlot,
-} from "./memory-core/index.ts";
+} from "./packages/core/src/index.ts";
 import {
   applyContextMarkersToText,
   buildTemporaryWorkspaceStatus,
   formatContextRef,
   type ContextFrameStore,
   type ContextMarker,
-} from "./frame.ts";
+} from "./packages/core/src/frame.ts";
 import {
   buildMemoryMaintenancePrompt,
   maintainMemoryContext,
-} from "./maintain.ts";
+} from "./packages/core/src/maintain.ts";
 
 function assert(condition: unknown, message: string): void {
   if (!condition) throw new Error(message);

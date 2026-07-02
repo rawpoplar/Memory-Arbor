@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 import {
   buildMemoryMaintenancePrompt,
   maintainMemoryContext,
-} from "../maintain.ts";
+} from "@rawpoplar/memory-arbor-core/maintain";
 import {
   archiveMemoryNode,
   buildMemoryInjectionView,
@@ -22,7 +22,7 @@ import {
   type MemoryConfig,
   type MemoryInjectionView,
   type MemoryStore,
-} from "../memory-core/index.ts";
+} from "@rawpoplar/memory-arbor-core";
 import {
   applyContextMarkersToText,
   buildTemporaryWorkspaceStatus,
@@ -36,7 +36,7 @@ import {
   type ContextRange,
   type TemporaryWorkspaceRef,
   type TemporaryWorkspaceStatus,
-} from "../frame.ts";
+} from "@rawpoplar/memory-arbor-core/frame";
 
 const schema = tool.schema;
 const NODE_KINDS = ["root", "branch", "leaf"] as const;
@@ -68,12 +68,8 @@ type ContextTarget = {
 };
 
 export const MemoryContextPlugin: Plugin = async () => {
-  const base = join(
-    process.env.USERPROFILE || process.env.HOME || ".",
-    ".config",
-    "opencode",
-    "memory-arbor",
-  );
+  const home = process.env.USERPROFILE || process.env.HOME || ".";
+  const base = process.env.MEMORY_ARBOR_HOME || join(home, ".memory-arbor");
   const storeFile = join(base, "store.json");
   const configFile = join(base, "config.yaml");
   const frameFile = join(base, "context-frame.json");

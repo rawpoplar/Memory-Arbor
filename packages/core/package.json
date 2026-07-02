@@ -1,0 +1,12 @@
+{
+  "name": "@rawpoplar/memory-arbor-core",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./frame": "./src/frame.ts",
+    "./maintain": "./src/maintain.ts"
+  }
+}
