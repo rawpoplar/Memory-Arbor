@@ -9,13 +9,13 @@ Memory Arbor 是一个面向长时间 AI 对话的轻量级记忆与上下文控
 
 这样可以尽量支持长期使用单一会话，同时避免实际上传上下文超过设定预算。
 
-目前仅有opencode的experimental.chat.messages.transform钩子允许我们获取/修改实际上传到模型服务器的实际上下文，所以该项目目前是作为opencode的插件来使用的
+OpenCode adapter 通过 `experimental.chat.messages.transform` 改写即将上传的 messages，并通过 `experimental.chat.system.transform` 在临时工作区接近预算时加入维护提示。
 
 ## 当前状态
 
-当前设计版本是 v0.3。
+当前设计版本是 v0.4。
 
-OpenCode adapter 使用 `experimental.chat.messages.transform` 检查并改写即将发送给模型的 messages。这个 hook 不会把修改持久写回 OpenCode 历史；已处理内容通过外部 marker store 记录，并在每轮请求中重新清理。
+OpenCode adapter 使用 `experimental.chat.messages.transform` 检查并改写即将发送给模型的 messages。这个 hook 不会把修改持久写回 OpenCode 历史；已处理内容通过外部 marker store 记录，并在每轮请求中重新清理。`experimental.chat.system.transform` 只注入维护提示，不注入完整记忆正文。
 
 完整设计和后续版本计划见 [design.md](design.md)。
 
@@ -26,6 +26,7 @@ memory-core/                 宿主无关的记忆树实现。
 plugins/memory-context.ts    OpenCode adapter 和 memory_* 工具。
 skills/memory-context/       面向模型的记忆使用 skill。
 frame.ts                     外部 marker 和临时工作区辅助逻辑。
+maintain.ts                  组合维护工具和 system 维护提示的纯逻辑。
 adapter-smoke.ts             adapter 层 smoke 测试。
 design.md                    当前设计和后续版本计划。
 ```
@@ -39,9 +40,10 @@ design.md                    当前设计和后续版本计划。
 3. 外部 marker 清理已经记忆化或已丢弃的原始上下文。
 4. 剩余原始上下文成为临时工作区。
 5. 已装载的 memory slots 被插入 `<memory_frame>`。
-6. 模型最终只接收 memory frame 和未标记的临时工作区。
+6. 如果临时工作区接近或超过预算，system prompt 中加入维护提示。
+7. 模型最终接收 memory frame、未标记的临时工作区和必要的维护提示。
 
-之后模型可以通过 `memory_*` 工具搜索、创建、更新、装载和标记记忆。
+之后模型可以通过 `memory_maintain_context` 批量创建/更新、标记、丢弃和装载记忆；也可以使用更细粒度的 `memory_*` 原子工具。
 
 ## 使用方法
 
@@ -53,6 +55,7 @@ plugins/
 skills/
 adapter-smoke.ts
 frame.ts
+maintain.ts
 config.example.yaml
 ```
 
@@ -72,6 +75,7 @@ Copy-Item "plugins" $target -Recurse -Force
 Copy-Item "skills" $target -Recurse -Force
 Copy-Item "adapter-smoke.ts" $target -Force
 Copy-Item "frame.ts" $target -Force
+Copy-Item "maintain.ts" $target -Force
 Copy-Item "config.example.yaml" $target -Force
 ```
 
@@ -108,6 +112,7 @@ Copy-Item "config.example.yaml" (Join-Path $state "config.yaml") -Force
 ```powershell
 node --check "memory-core\index.ts"
 node --check "frame.ts"
+node --check "maintain.ts"
 node --check "plugins\memory-context.ts"
 node --check "adapter-smoke.ts"
 node "memory-core\smoke.ts"
@@ -127,6 +132,7 @@ memory-context adapter smoke passed
 - skill 只描述什么时候调用工具，不保存记忆。
 - OpenCode 专属的上下文投影逻辑属于 adapter。
 - marker 是外部状态，因为 `messages.transform` 只修改本轮请求视图，不会修改已保存的聊天历史。
+- `system.transform` 只注入维护提示，不注入完整记忆正文。
 
 ## 许可证
 

@@ -9,8 +9,13 @@ import {
   applyContextMarkersToText,
   buildTemporaryWorkspaceStatus,
   formatContextRef,
+  type ContextFrameStore,
   type ContextMarker,
 } from "./frame.ts";
+import {
+  buildMemoryMaintenancePrompt,
+  maintainMemoryContext,
+} from "./maintain.ts";
 
 function assert(condition: unknown, message: string): void {
   if (!condition) throw new Error(message);
@@ -94,6 +99,162 @@ const workspace = buildTemporaryWorkspaceStatus(
 assert(
   workspace.pressure === "over_limit",
   "workspace pressure should report over limit without cropping",
+);
+
+const pressureFrame: ContextFrameStore = {
+  version: 0,
+  markers: [],
+  lastWorkspace: workspace,
+  updatedAt: timestamp,
+};
+const pressurePrompt = buildMemoryMaintenancePrompt(pressureFrame, {
+  storeVersion: store.version,
+});
+assert(
+  pressurePrompt?.includes("memory_maintain_context"),
+  "pressure prompt should ask for the maintain tool",
+);
+assert(
+  pressurePrompt?.includes(range.refs[0].ref),
+  "pressure prompt should include older temporary refs",
+);
+
+const normalFrame: ContextFrameStore = {
+  version: 0,
+  markers: [],
+  lastWorkspace: buildTemporaryWorkspaceStatus(
+    [],
+    config.temporaryWorkspace,
+    timestamp,
+  ),
+  updatedAt: timestamp,
+};
+assert(
+  buildMemoryMaintenancePrompt(normalFrame) === null,
+  "normal pressure should not produce a system maintenance prompt",
+);
+
+let markerIndex = 0;
+const maintainCreate = maintainMemoryContext(
+  store,
+  pressureFrame,
+  {
+    createNodes: [
+      {
+        title: "Maintained Context",
+        summary: "Maintained context summary.",
+        content: "Maintained context content.",
+        tags: ["maintain"],
+        markRefs: [range.refs[0].ref],
+        loadSlot: "working_context",
+      },
+    ],
+    discardRefs: [range.refs[1].ref],
+  },
+  {
+    memoryId: () => "maintained-context",
+    markerId: () => `maintain-marker-${++markerIndex}`,
+    timestamp,
+  },
+);
+assert(maintainCreate.status === "ok", "maintain create should succeed");
+assert(
+  maintainCreate.status === "ok" &&
+    maintainCreate.created[0]?.id === "maintained-context",
+  "maintain create should create the requested node",
+);
+assert(
+  pressureFrame.markers.some(
+    (marker) =>
+      marker.status === "memorized" &&
+      marker.nodeId === "maintained-context",
+  ),
+  "maintain create should mark refs as memorized",
+);
+assert(
+  pressureFrame.markers.some((marker) => marker.status === "discarded"),
+  "maintain create should mark discard refs as discarded",
+);
+assert(
+  store.slots.some(
+    (slot) =>
+      slot.name === "working_context" &&
+      slot.loadedNodeIds.includes("maintained-context"),
+  ),
+  "maintain create should load the created node",
+);
+
+const updateProjection = applyContextMarkersToText(
+  "opencode:s:m:p3",
+  "update this ref",
+  [],
+);
+const updateFrame: ContextFrameStore = {
+  version: 0,
+  markers: [],
+  lastWorkspace: buildTemporaryWorkspaceStatus(
+    updateProjection.refs,
+    config.temporaryWorkspace,
+    timestamp,
+  ),
+  updatedAt: timestamp,
+};
+const maintainUpdate = maintainMemoryContext(
+  store,
+  updateFrame,
+  {
+    updateNodes: [
+      {
+        id: "adapter-smoke",
+        content: "Updated through memory_maintain_context.",
+        markRefs: [updateProjection.refs[0].ref],
+        loadSlot: "task_state",
+      },
+    ],
+  },
+  {
+    memoryId: () => "unused",
+    markerId: () => `maintain-marker-${++markerIndex}`,
+    timestamp,
+  },
+);
+assert(maintainUpdate.status === "ok", "maintain update should succeed");
+assert(
+  maintainUpdate.status === "ok" && maintainUpdate.updated.length === 1,
+  "maintain update should update one node",
+);
+assert(
+  updateFrame.markers.some(
+    (marker) =>
+      marker.status === "memorized" && marker.nodeId === "adapter-smoke",
+  ),
+  "maintain update should mark refs as memorized",
+);
+
+const storeBeforeInvalid = JSON.stringify(store);
+const frameBeforeInvalid = JSON.stringify(updateFrame);
+const invalidMaintain = maintainMemoryContext(
+  store,
+  updateFrame,
+  {
+    loadSlots: [
+      {
+        slot: "missing_slot",
+        nodeIds: ["adapter-smoke"],
+      },
+    ],
+  },
+  {
+    memoryId: () => "unused",
+    markerId: () => `maintain-marker-${++markerIndex}`,
+    timestamp,
+  },
+);
+assert(invalidMaintain.status === "invalid", "invalid maintain should fail");
+assert(
+  JSON.stringify(store) === storeBeforeInvalid &&
+    JSON.stringify(updateFrame) === frameBeforeInvalid,
+  "invalid maintain should not mutate store or frame",
 );
 
 const memoryView = buildMemoryInjectionView(store, config);

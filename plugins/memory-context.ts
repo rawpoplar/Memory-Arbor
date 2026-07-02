@@ -4,6 +4,10 @@ import { dirname, join } from "node:path";
 import { tool, type Plugin } from "@opencode-ai/plugin";
 import { parse as parseYaml } from "yaml";
 import {
+  buildMemoryMaintenancePrompt,
+  maintainMemoryContext,
+} from "../maintain.ts";
+import {
   archiveMemoryNode,
   buildMemoryInjectionView,
   createMemoryNode,
@@ -38,6 +42,7 @@ const schema = tool.schema;
 const NODE_KINDS = ["root", "branch", "leaf"] as const;
 const NODE_STATUSES = ["active", "archived"] as const;
 const MARKER_STATUSES = ["memorized", "discarded"] as const;
+const LOAD_MODES = ["replace", "append"] as const;
 
 type ToolPayload = Record<string, unknown>;
 type StoreMutation = ToolPayload & { changed?: boolean };
@@ -616,6 +621,154 @@ export const MemoryContextPlugin: Plugin = async () => {
           });
         },
       }),
+
+      memory_maintain_context: tool({
+        description:
+          "Deterministically batch memory node create/update, context marking, slot loading, and ref discarding.",
+        args: {
+          createNodes: schema
+            .array(
+              schema.object({
+                title: schema.string().min(1).describe("Short memory node title."),
+                summary: schema
+                  .string()
+                  .optional()
+                  .describe("Short summary. Defaults to a content/title summary."),
+                content: schema.string().optional().describe("Detailed memory content."),
+                tags: schema.array(schema.string()).optional().describe("Search tags."),
+                parentId: schema
+                  .string()
+                  .optional()
+                  .describe("Parent node id. Defaults to root."),
+                nodeKind: schema
+                  .enum(NODE_KINDS)
+                  .optional()
+                  .describe("Node kind. Defaults to leaf."),
+                sourceRefs: schema
+                  .array(schema.string())
+                  .optional()
+                  .describe("Optional source references."),
+                markRefs: schema
+                  .array(schema.string())
+                  .optional()
+                  .describe("Temporary workspace refs to mark as memorized."),
+                loadSlot: schema
+                  .string()
+                  .optional()
+                  .describe("Optional slot to append the created node into."),
+                loadMode: schema
+                  .enum(LOAD_MODES)
+                  .optional()
+                  .describe("Load mode. Defaults to append."),
+              }),
+            )
+            .optional()
+            .describe("Memory nodes to create."),
+          updateNodes: schema
+            .array(
+              schema.object({
+                id: schema.string().min(1).describe("Memory node id."),
+                title: schema.string().min(1).optional().describe("Replacement title."),
+                summary: schema
+                  .string()
+                  .min(1)
+                  .optional()
+                  .describe("Replacement summary."),
+                content: schema
+                  .string()
+                  .min(1)
+                  .optional()
+                  .describe("Replacement content."),
+                tags: schema.array(schema.string()).optional().describe("Replacement tags."),
+                nodeKind: schema
+                  .enum(NODE_KINDS)
+                  .optional()
+                  .describe("Replacement node kind."),
+                sourceRefs: schema
+                  .array(schema.string())
+                  .optional()
+                  .describe("Replacement source references."),
+                markRefs: schema
+                  .array(schema.string())
+                  .optional()
+                  .describe("Temporary workspace refs to mark as memorized."),
+                loadSlot: schema
+                  .string()
+                  .optional()
+                  .describe("Optional slot to append the updated node into."),
+                loadMode: schema
+                  .enum(LOAD_MODES)
+                  .optional()
+                  .describe("Load mode. Defaults to append."),
+              }),
+            )
+            .optional()
+            .describe("Active memory nodes to update or link to refs."),
+          discardRefs: schema
+            .array(schema.string())
+            .optional()
+            .describe("Temporary workspace refs to mark as discarded."),
+          loadSlots: schema
+            .array(
+              schema.object({
+                slot: schema.string().min(1).describe("Configured slot name."),
+                nodeIds: schema
+                  .array(schema.string())
+                  .describe("Active memory node ids to load."),
+                mode: schema
+                  .enum(LOAD_MODES)
+                  .optional()
+                  .describe("Load mode. Defaults to replace."),
+              }),
+            )
+            .optional()
+            .describe("Explicit slot load operations."),
+        },
+        async execute(args) {
+          const config = await readConfig();
+          const store = await readStore(config);
+          const frame = await readFrame(config);
+          const maintained = maintainMemoryContext(store, frame, args, {
+            memoryId,
+            markerId,
+            timestamp: nowIso(),
+          });
+          const { changedStore, changedFrame, ...publicPayload } = maintained;
+
+          if (maintained.status === "ok") {
+            if (changedStore) await writeStore(store);
+            if (changedFrame) await writeFrame(frame);
+          }
+
+          return result({
+            ...publicPayload,
+            version: store.version,
+            frameVersion: frame.version,
+            storeFile,
+            configFile,
+            frameFile,
+          });
+        },
+      }),
+    },
+
+    "experimental.chat.system.transform": async (_input, output) => {
+      let config: MemoryConfig;
+      let store: MemoryStore;
+      let frame: ContextFrameStore;
+      try {
+        config = await readConfig();
+        store = await readStore(config);
+        frame = await readFrame(config);
+      } catch {
+        return;
+      }
+
+      const prompt = buildMemoryMaintenancePrompt(frame, {
+        storeVersion: store.version,
+      });
+      if (!prompt) return;
+      output.system.push(prompt);
     },
 
     "experimental.chat.messages.transform": async (_input, output) => {
