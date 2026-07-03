@@ -50,17 +50,6 @@ design.md                    当前设计和后续版本计划。
 
 ## 使用方法
 
-OpenCode 当前是完整接入目标。将 `integrations/opencode/src/plugin.ts` 作为 OpenCode 插件入口使用，并确保 workspace 依赖可解析：
-
-```text
-packages/core/
-integrations/opencode/
-skills/
-config.example.yaml
-```
-
-Codex 和 Claude Code 目录目前是降级插件壳：只提供 skill 和 `.mcp.example.json` 样例配置，不能改写或删除宿主原始会话上下文。
-
 Memory Arbor 的默认状态目录是：
 
 ```text
@@ -68,6 +57,53 @@ Memory Arbor 的默认状态目录是：
 ```
 
 可以通过 `MEMORY_ARBOR_HOME` 覆盖。OpenCode、Codex 和 Claude Code 降级接入应指向同一个状态目录。
+
+### OpenCode
+
+OpenCode 当前是完整接入目标。本仓库已经包含项目级 OpenCode loader：
+
+```text
+.opencode/plugins/memory-arbor.ts
+.opencode/package.json
+```
+
+因此在本仓库根目录启动 OpenCode 时，OpenCode 会按官方本地插件规则自动加载该 loader：
+
+```powershell
+cd /d "D:\repos\Memory Arbor"
+opencode
+```
+
+`.opencode/package.json` 使用 `file:` 依赖指向当前仓库内的 `packages/core` 和 `integrations/opencode`。OpenCode 会在启动时为 `.opencode` 配置目录安装本地插件依赖。
+
+如果要在其它项目中使用当前源码版 Memory Arbor，不会自动跨盘加载本仓库。需要在那个项目的 `.opencode/plugins/` 或全局 `C:\Users\admin\.config\opencode\plugins\` 下单独放 loader，并让对应配置目录的 `package.json` 指向本仓库的本地包。后续发布 npm 包后，可以改用 `opencode.json` 的 `plugin` 数组安装。
+
+该接入会通过 `experimental.chat.messages.transform` 改写即将上传的 messages。
+
+### Claude Code
+
+Claude Code 当前是降级插件壳：只提供 skill 和 `.mcp.example.json` 样例配置，不能改写或删除宿主原始会话上下文。
+
+在 Claude Code 中添加本仓库 marketplace，然后安装插件：
+
+```text
+/plugin marketplace add "D:\repos\Memory Arbor"
+/plugin install memory-arbor-claude-code@memory-arbor
+```
+
+安装后可通过插件命名空间使用 skill。当前 `.mcp.example.json` 仅是样例，等 `packages/mcp` 实现真实 MCP server 后再启用。
+
+### Codex
+
+Codex 当前也是降级插件壳：只提供 skill 和 `.mcp.example.json` 样例配置，不能改写或删除宿主原始会话上下文。
+
+先注册本仓库 marketplace：
+
+```powershell
+codex plugin marketplace add "D:\repos\Memory Arbor"
+```
+
+然后重启 Codex，在插件目录中选择 `Memory Arbor` marketplace，并安装 `memory-arbor-codex`。如果直接在本仓库内启动 Codex，Codex 也会读取 `.agents/plugins/marketplace.json` 作为 repo-scoped marketplace。
 
 如果要启用示例配置，可以把 `config.example.yaml` 复制到 Memory Arbor 状态目录并改名为 `config.yaml`：
 
