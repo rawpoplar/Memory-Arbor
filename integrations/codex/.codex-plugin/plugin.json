@@ -1,13 +1,14 @@
 {
   "name": "memory-arbor-codex",
   "version": "0.4.0",
-  "description": "Memory Arbor downgraded Codex integration using shared skills and MCP tools.",
+  "description": "Memory Arbor Codex integration using shared skills and prompt-submit hooks.",
   "license": "Apache-2.0",
   "skills": "./skills/",
+  "hooks": "./hooks.json",
   "interface": {
     "displayName": "Memory Arbor for Codex",
-    "shortDescription": "Prompt-only memory continuity with shared Memory Arbor tools",
-    "longDescription": "Use Memory Arbor memory tools and skills from Codex. This downgraded integration cannot rewrite or delete host conversation context; use a new session to continue from the shared memory store.",
+    "shortDescription": "Append Memory Arbor context before Codex prompts",
+    "longDescription": "Use Memory Arbor skills and a UserPromptSubmit hook from Codex. This prompt-hook adapter can append loaded memory context before each prompt, but cannot rewrite or delete prior host conversation messages.",
     "developerName": "rawpoplar",
     "category": "Developer Tools",
     "capabilities": [

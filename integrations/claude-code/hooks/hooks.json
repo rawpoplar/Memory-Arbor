@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root = git rev-parse --show-toplevel; node --experimental-strip-types (Join-Path $root 'scripts/memory-arbor-prompt-frame.ts')\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
