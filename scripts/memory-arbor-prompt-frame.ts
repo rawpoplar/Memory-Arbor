@@ -1,8 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
   buildMemoryInjectionView,
+  createEmptyMemoryStore,
   normalizeMemoryConfig,
   normalizeMemoryStore,
   type MemoryConfig,
@@ -42,7 +43,13 @@ async function readConfig(): Promise<MemoryConfig> {
 }
 
 async function readStore(config: MemoryConfig): Promise<MemoryStore> {
-  return normalizeMemoryStore(await readJson(storeFile), config);
+  const rawStore = await readJson(storeFile);
+  if (rawStore !== null) return normalizeMemoryStore(rawStore, config);
+
+  const store = createEmptyMemoryStore(config);
+  await mkdir(base, { recursive: true });
+  await writeFile(storeFile, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  return store;
 }
 
 function buildPromptFrame(view: MemoryInjectionView): string | null {
