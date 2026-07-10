@@ -9,7 +9,6 @@
     "@rawpoplar/memory-arbor-context": "workspace:*",
     "@rawpoplar/memory-arbor-core": "workspace:*",
     "@rawpoplar/memory-arbor-tools": "workspace:*",
-    "@opencode-ai/plugin": "1.14.28",
-    "yaml": "^2.8.3"
+    "@opencode-ai/plugin": "1.14.28"
   }
 }

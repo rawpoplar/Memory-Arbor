@@ -5,10 +5,11 @@
   "type": "module",
   "license": "Apache-2.0",
   "exports": {
-    ".": "./src/maintain.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@rawpoplar/memory-arbor-context": "workspace:*",
-    "@rawpoplar/memory-arbor-core": "workspace:*"
+    "@rawpoplar/memory-arbor-core": "workspace:*",
+    "yaml": "^2.8.3"
   }
 }

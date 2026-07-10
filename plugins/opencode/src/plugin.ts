@@ -1,24 +1,10 @@
-import { randomBytes } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import { tool, type Plugin } from "@opencode-ai/plugin";
-import { parse as parseYaml } from "yaml";
 import {
   buildMemoryMaintenancePrompt,
-  maintainMemoryContext,
+  createMemoryArborTools,
 } from "@rawpoplar/memory-arbor-tools";
 import {
-  archiveMemoryNode,
   buildMemoryInjectionView,
-  createMemoryNode,
-  loadMemorySlot,
-  moveMemoryNode,
-  normalizeMemoryConfig,
-  normalizeMemoryStore,
-  openMemoryNode,
-  readMemorySlots,
-  searchMemoryNodes,
-  updateMemoryNode,
   type MemoryConfig,
   type MemoryInjectionView,
   type MemoryStore,
@@ -27,13 +13,7 @@ import {
   applyContextMarkersToText,
   buildTemporaryWorkspaceStatus,
   formatContextRef,
-  normalizeContextFrameStore,
-  parseContextRef,
-  sameContextTarget,
   type ContextFrameStore,
-  type ContextMarker,
-  type ContextMarkerStatus,
-  type ContextRange,
   type TemporaryWorkspaceRef,
   type TemporaryWorkspaceStatus,
 } from "@rawpoplar/memory-arbor-context";
@@ -44,8 +24,6 @@ const NODE_STATUSES = ["active", "archived"] as const;
 const MARKER_STATUSES = ["memorized", "discarded"] as const;
 const LOAD_MODES = ["replace", "append"] as const;
 
-type ToolPayload = Record<string, unknown>;
-type StoreMutation = ToolPayload & { changed?: boolean };
 type OpenCodeMessage = {
   info: {
     id?: string;
@@ -62,99 +40,11 @@ type TextPart = OpenCodePart & {
   sessionID?: string;
   messageID?: string;
 };
-type ContextTarget = {
-  sourceKey: string;
-  range?: ContextRange;
-};
-
 export const MemoryContextPlugin: Plugin = async () => {
-  const home = process.env.USERPROFILE || process.env.HOME || ".";
-  const base = process.env.MEMORY_ARBOR_HOME || join(home, ".memory-arbor");
-  const storeFile = join(base, "store.json");
-  const configFile = join(base, "config.yaml");
-  const frameFile = join(base, "context-frame.json");
+  const memory = createMemoryArborTools();
 
-  async function readJson(path: string): Promise<unknown | null> {
-    try {
-      return JSON.parse(await readFile(path, "utf8"));
-    } catch (error) {
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? error.code
-          : undefined;
-      if (code === "ENOENT") return null;
-      throw error;
-    }
-  }
-
-  async function readYaml(path: string): Promise<unknown | null> {
-    try {
-      return parseYaml(await readFile(path, "utf8")) ?? null;
-    } catch (error) {
-      const code =
-        typeof error === "object" && error !== null && "code" in error
-          ? error.code
-          : undefined;
-      if (code === "ENOENT") return null;
-      throw error;
-    }
-  }
-
-  async function readConfig(): Promise<MemoryConfig> {
-    return normalizeMemoryConfig(await readYaml(configFile));
-  }
-
-  async function readStore(config: MemoryConfig): Promise<MemoryStore> {
-    return normalizeMemoryStore(await readJson(storeFile), config);
-  }
-
-  async function readFrame(config: MemoryConfig): Promise<ContextFrameStore> {
-    return normalizeContextFrameStore(
-      await readJson(frameFile),
-      config.temporaryWorkspace,
-    );
-  }
-
-  async function writeStore(store: MemoryStore): Promise<void> {
-    await mkdir(dirname(storeFile), { recursive: true });
-    await writeFile(storeFile, JSON.stringify(store, null, 2), "utf8");
-  }
-
-  async function writeFrame(frame: ContextFrameStore): Promise<void> {
-    await mkdir(dirname(frameFile), { recursive: true });
-    await writeFile(frameFile, JSON.stringify(frame, null, 2), "utf8");
-  }
-
-  async function updateStore(
-    mutator: (store: MemoryStore, config: MemoryConfig) => StoreMutation,
-  ): Promise<ToolPayload> {
-    const config = await readConfig();
-    const store = await readStore(config);
-    const payload = mutator(store, config);
-    const { changed: _changed, ...publicPayload } = payload;
-    if (payload.changed !== false) {
-      store.version += 1;
-      await writeStore(store);
-    }
-    return {
-      ...publicPayload,
-      version: store.version,
-      storeFile,
-      configFile,
-      frameFile,
-    };
-  }
-
-  function result(payload: ToolPayload): string {
+  function result(payload: unknown): string {
     return JSON.stringify(payload, null, 2);
-  }
-
-  function memoryId(): string {
-    return `mem-${randomBytes(6).toString("hex")}`;
-  }
-
-  function markerId(): string {
-    return `ctxmark-${randomBytes(6).toString("hex")}`;
   }
 
   return {
@@ -190,26 +80,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Optional source references."),
         },
         async execute(args) {
-          return result(
-            await updateStore((store) => {
-              const created = createMemoryNode(store, args, {
-                id: memoryId(),
-              });
-              if (created.status !== "ok") {
-                return {
-                  status: created.status,
-                  action: "memory_create_node",
-                  message: created.message,
-                  changed: false,
-                };
-              }
-              return {
-                status: "ok",
-                action: "memory_create_node",
-                node: created.value,
-              };
-            }),
-          );
+          return result(await memory.memoryCreateNode(args));
         },
       }),
 
@@ -236,18 +107,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Maximum result count. Defaults to 10."),
         },
         async execute(args) {
-          const config = await readConfig();
-          const store = await readStore(config);
-          return result({
-            status: "ok",
-            action: "memory_search",
-            version: store.version,
-            nodes: searchMemoryNodes(store, args.query ?? "", {
-              tag: args.tag,
-              status: args.status,
-              limit: args.limit,
-            }),
-          });
+          return result(await memory.memorySearch(args));
         },
       }),
 
@@ -258,15 +118,7 @@ export const MemoryContextPlugin: Plugin = async () => {
           id: schema.string().min(1).describe("Memory node id."),
         },
         async execute(args) {
-          const config = await readConfig();
-          const store = await readStore(config);
-          const view = openMemoryNode(store, args.id);
-          return result({
-            status: view ? "ok" : "not_found",
-            action: "memory_open",
-            version: store.version,
-            view,
-          });
+          return result(await memory.memoryOpen(args.id));
         },
       }),
 
@@ -304,31 +156,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Replacement source references."),
         },
         async execute(args) {
-          return result(
-            await updateStore((store) => {
-              const updated = updateMemoryNode(store, args.id, {
-                title: args.title,
-                summary: args.summary,
-                content: args.content,
-                tags: args.tags,
-                nodeKind: args.nodeKind,
-                sourceRefs: args.sourceRefs,
-              });
-              if (updated.status !== "ok") {
-                return {
-                  status: updated.status,
-                  action: "memory_update_node",
-                  message: updated.message,
-                  changed: false,
-                };
-              }
-              return {
-                status: "ok",
-                action: "memory_update_node",
-                node: updated.value,
-              };
-            }),
-          );
+          return result(await memory.memoryUpdateNode(args));
         },
       }),
 
@@ -339,24 +167,7 @@ export const MemoryContextPlugin: Plugin = async () => {
           id: schema.string().min(1).describe("Memory node id."),
         },
         async execute(args) {
-          return result(
-            await updateStore((store) => {
-              const archived = archiveMemoryNode(store, args.id);
-              if (archived.status !== "ok") {
-                return {
-                  status: archived.status,
-                  action: "memory_archive_node",
-                  message: archived.message,
-                  changed: false,
-                };
-              }
-              return {
-                status: "ok",
-                action: "memory_archive_node",
-                ...archived.value,
-              };
-            }),
-          );
+          return result(await memory.memoryArchiveNode(args.id));
         },
       }),
 
@@ -367,24 +178,7 @@ export const MemoryContextPlugin: Plugin = async () => {
           newParentId: schema.string().min(1).describe("New parent node id."),
         },
         async execute(args) {
-          return result(
-            await updateStore((store) => {
-              const moved = moveMemoryNode(store, args.id, args.newParentId);
-              if (moved.status !== "ok") {
-                return {
-                  status: moved.status,
-                  action: "memory_move_node",
-                  message: moved.message,
-                  changed: false,
-                };
-              }
-              return {
-                status: "ok",
-                action: "memory_move_node",
-                node: moved.value,
-              };
-            }),
-          );
+          return result(await memory.memoryMoveNode(args));
         },
       }),
 
@@ -403,29 +197,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Load mode. Defaults to replace."),
         },
         async execute(args) {
-          return result(
-            await updateStore((store) => {
-              const loaded = loadMemorySlot(
-                store,
-                args.slot,
-                args.nodeIds,
-                args.mode ?? "replace",
-              );
-              if (loaded.status !== "ok") {
-                return {
-                  status: loaded.status,
-                  action: "memory_load_slot",
-                  message: loaded.message,
-                  changed: false,
-                };
-              }
-              return {
-                status: "ok",
-                action: "memory_load_slot",
-                slot: loaded.value,
-              };
-            }),
-          );
+          return result(await memory.memoryLoadSlot(args));
         },
       }),
 
@@ -434,17 +206,7 @@ export const MemoryContextPlugin: Plugin = async () => {
           "Read current configured memory slots and their loaded active memory nodes.",
         args: {},
         async execute() {
-          const config = await readConfig();
-          const store = await readStore(config);
-          return result({
-            status: "ok",
-            action: "memory_read_slots",
-            version: store.version,
-            slots: readMemorySlots(store),
-            storeFile,
-            configFile,
-            frameFile,
-          });
+          return result(await memory.memoryReadSlots());
         },
       }),
 
@@ -486,66 +248,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Required when status is memorized."),
         },
         async execute(args) {
-          const config = await readConfig();
-          const store = await readStore(config);
-          const frame = await readFrame(config);
-          const targets = contextTargets(args.refs, args.ranges);
-
-          if (targets.length === 0) {
-            return result({
-              status: "invalid",
-              action: "memory_mark_context",
-              message: "At least one valid ref or range is required.",
-              frameFile,
-            });
-          }
-
-          if (args.status === "memorized") {
-            if (!args.nodeId) {
-              return result({
-                status: "invalid",
-                action: "memory_mark_context",
-                message: "nodeId is required when status is memorized.",
-                frameFile,
-              });
-            }
-            const node = openMemoryNode(store, args.nodeId);
-            if (!node || node.node.status !== "active") {
-              return result({
-                status: "not_found",
-                action: "memory_mark_context",
-                message: `Active memory node '${args.nodeId}' was not found.`,
-                frameFile,
-              });
-            }
-          }
-
-          const timestamp = nowIso();
-          frame.markers = frame.markers.filter(
-            (marker) =>
-              !targets.some((target) => sameContextTarget(marker, target)),
-          );
-          const created = targets.map((target) =>
-            createMarker(
-              markerId(),
-              target,
-              args.status,
-              args.status === "memorized" ? args.nodeId : undefined,
-              timestamp,
-            ),
-          );
-          frame.markers.push(...created);
-          frame.version += 1;
-          frame.updatedAt = timestamp;
-          await writeFrame(frame);
-
-          return result({
-            status: "ok",
-            action: "memory_mark_context",
-            version: frame.version,
-            markers: created,
-            frameFile,
-          });
+          return result(await memory.memoryMarkContext(args));
         },
       }),
 
@@ -563,39 +266,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Refs or sourceKey@start:end targets to unmark."),
         },
         async execute(args) {
-          const config = await readConfig();
-          const frame = await readFrame(config);
-          const targets = contextTargets(args.refs, undefined);
-          const markerIds = new Set(args.markerIds ?? []);
-
-          if (targets.length === 0 && markerIds.size === 0) {
-            return result({
-              status: "invalid",
-              action: "memory_unmark_context",
-              message: "At least one marker id or ref is required.",
-              frameFile,
-            });
-          }
-
-          const before = frame.markers.length;
-          frame.markers = frame.markers.filter((marker) => {
-            if (markerIds.has(marker.id)) return false;
-            return !targets.some((target) => sameContextTarget(marker, target));
-          });
-          const removed = before - frame.markers.length;
-          if (removed > 0) {
-            frame.version += 1;
-            frame.updatedAt = nowIso();
-            await writeFrame(frame);
-          }
-
-          return result({
-            status: "ok",
-            action: "memory_unmark_context",
-            version: frame.version,
-            removed,
-            frameFile,
-          });
+          return result(await memory.memoryUnmarkContext(args));
         },
       }),
 
@@ -604,17 +275,7 @@ export const MemoryContextPlugin: Plugin = async () => {
           "Read external context frame state, markers, recent temporary workspace refs, and pressure status.",
         args: {},
         async execute() {
-          const config = await readConfig();
-          const frame = await readFrame(config);
-          return result({
-            status: "ok",
-            action: "memory_read_context_frame",
-            version: frame.version,
-            markers: frame.markers,
-            temporaryWorkspace: frame.lastWorkspace,
-            frameFile,
-            configFile,
-          });
+          return result(await memory.memoryReadContextFrame());
         },
       }),
 
@@ -721,29 +382,7 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Explicit slot load operations."),
         },
         async execute(args) {
-          const config = await readConfig();
-          const store = await readStore(config);
-          const frame = await readFrame(config);
-          const maintained = maintainMemoryContext(store, frame, args, {
-            memoryId,
-            markerId,
-            timestamp: nowIso(),
-          });
-          const { changedStore, changedFrame, ...publicPayload } = maintained;
-
-          if (maintained.status === "ok") {
-            if (changedStore) await writeStore(store);
-            if (changedFrame) await writeFrame(frame);
-          }
-
-          return result({
-            ...publicPayload,
-            version: store.version,
-            frameVersion: frame.version,
-            storeFile,
-            configFile,
-            frameFile,
-          });
+          return result(await memory.memoryMaintainContext(args));
         },
       }),
     },
@@ -753,9 +392,9 @@ export const MemoryContextPlugin: Plugin = async () => {
       let store: MemoryStore;
       let frame: ContextFrameStore;
       try {
-        config = await readConfig();
-        store = await readStore(config);
-        frame = await readFrame(config);
+        config = await memory.readConfig();
+        store = await memory.readStore(config);
+        frame = await memory.readFrame(config);
       } catch {
         return;
       }
@@ -772,9 +411,9 @@ export const MemoryContextPlugin: Plugin = async () => {
       let store: MemoryStore;
       let frame: ContextFrameStore;
       try {
-        config = await readConfig();
-        store = await readStore(config);
-        frame = await readFrame(config);
+        config = await memory.readConfig();
+        store = await memory.readStore(config);
+        frame = await memory.readFrame(config);
       } catch {
         return;
       }
@@ -824,7 +463,7 @@ export const MemoryContextPlugin: Plugin = async () => {
       frame.lastWorkspace = workspace;
       frame.version += 1;
       frame.updatedAt = timestamp;
-      await writeFrame(frame);
+      await memory.writeFrame(frame);
 
       const memoryView = buildMemoryInjectionView(store, config);
       insertMemoryFrame(
@@ -834,62 +473,6 @@ export const MemoryContextPlugin: Plugin = async () => {
     },
   };
 };
-
-function contextTargets(
-  refs: string[] | undefined,
-  ranges: Array<{ ref: string; start: number; end: number }> | undefined,
-): ContextTarget[] {
-  const targets: ContextTarget[] = [];
-  for (const ref of refs ?? []) {
-    const parsed = parseContextRef(ref);
-    if (parsed) targets.push(parsed);
-  }
-  for (const range of ranges ?? []) {
-    if (
-      !Number.isInteger(range.start) ||
-      !Number.isInteger(range.end) ||
-      range.end <= range.start
-    )
-      continue;
-    const parsed = parseContextRef(range.ref);
-    if (!parsed) continue;
-    targets.push({
-      sourceKey: parsed.sourceKey,
-      range: {
-        start: range.start,
-        end: range.end,
-      },
-    });
-  }
-  return uniqueTargets(targets);
-}
-
-function uniqueTargets(targets: ContextTarget[]): ContextTarget[] {
-  const unique: ContextTarget[] = [];
-  for (const target of targets) {
-    if (!unique.some((candidate) => sameContextTarget(candidate, target)))
-      unique.push(target);
-  }
-  return unique;
-}
-
-function createMarker(
-  id: string,
-  target: ContextTarget,
-  status: ContextMarkerStatus,
-  nodeId: string | undefined,
-  timestamp: string,
-): ContextMarker {
-  return {
-    id,
-    sourceKey: target.sourceKey,
-    status,
-    nodeId,
-    range: target.range,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-}
 
 function isTextPart(part: OpenCodePart): part is TextPart {
   return part.type === "text" && typeof part.text === "string";

@@ -7,8 +7,7 @@
   "main": "./src/server.ts",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
-    "@rawpoplar/memory-arbor-core": "workspace:*",
-    "yaml": "^2.8.3",
+    "@rawpoplar/memory-arbor-tools": "workspace:*",
     "zod": "^3.25.28"
   }
 }
