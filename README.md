@@ -95,6 +95,8 @@ Claude Code 当前是 prompt hook 降级接入：通过 `UserPromptSubmit` hook 
 
 安装后可通过插件命名空间使用 skill。当前 `.mcp.example.json` 仅是样例，等 `packages/mcp` 实现真实 MCP server 后再启用工具接入。
 
+源码调试插件时可以用 `claude --plugin-dir .\integrations\claude-code --debug` 启动；项目级 fallback hook 位于 `.claude/settings.json`。Claude Code hook 使用 `additionalContext` JSON 注入，避免把 frame 显示成普通 hook 输出。如果 hook 未触发，先用 `/hooks` 确认插件 hook 或项目 hook 是否被加载和信任。
+
 ### Codex
 
 Codex 当前也是 prompt hook 降级接入：通过 `UserPromptSubmit` hook 运行 `scripts/memory-arbor-prompt-frame.ts`，把 `store.json` 中已装载 slots 追加进本轮 prompt 可见上下文。
@@ -108,6 +110,8 @@ codex plugin marketplace add "D:\repos\Memory Arbor"
 ```
 
 然后重启 Codex，在插件目录中选择 `Memory Arbor` marketplace，并安装 `memory-arbor-codex`。如果直接在本仓库内启动 Codex，Codex 也会读取 `.agents/plugins/marketplace.json` 作为 repo-scoped marketplace。
+
+注意：repo-scoped marketplace 只会让插件出现在插件目录里，不等于已安装、启用或信任 hook。Codex hook 当前使用普通 stdout 注入 prompt frame；安装/启用后，如果 Codex 提示 hook 需要 review，请用 `/hooks` 检查并信任当前 hook 定义。
 
 如果要启用示例配置，可以把 `config.example.yaml` 复制到 Memory Arbor 状态目录并改名为 `config.yaml`：
 

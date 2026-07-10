@@ -8,7 +8,7 @@
             "command": "node",
             "args": [
               "--experimental-strip-types",
-              "${CLAUDE_PLUGIN_ROOT}/../../scripts/memory-arbor-prompt-frame.ts",
+              "${CLAUDE_PROJECT_DIR}/scripts/memory-arbor-prompt-frame.ts",
               "--format=claude-json"
             ],
             "timeout": 10

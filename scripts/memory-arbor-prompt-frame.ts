@@ -1,6 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parse as parseYaml } from "yaml";
 import {
   buildMemoryInjectionView,
   createEmptyMemoryStore,
@@ -16,6 +15,8 @@ const base = process.env.MEMORY_ARBOR_HOME || join(home, ".memory-arbor");
 const storeFile = join(base, "store.json");
 const configFile = join(base, "config.yaml");
 
+type OutputFormat = "plain" | "claude-json";
+
 async function readJson(path: string): Promise<unknown | null> {
   try {
     return JSON.parse(await readText(path));
@@ -26,12 +27,15 @@ async function readJson(path: string): Promise<unknown | null> {
 }
 
 async function readYaml(path: string): Promise<unknown | null> {
+  let text: string;
   try {
-    return parseYaml(await readText(path)) ?? null;
+    text = await readText(path);
   } catch (error) {
     if (hasCode(error, "ENOENT")) return null;
     throw error;
   }
+  const { parse } = await import("yaml");
+  return parse(text) ?? null;
 }
 
 async function readText(path: string): Promise<string> {
@@ -112,7 +116,30 @@ async function main(): Promise<void> {
   const config = await readConfig();
   const store = await readStore(config);
   const frame = buildPromptFrame(buildMemoryInjectionView(store, config));
-  if (frame) process.stdout.write(`${frame}\n`);
+  if (frame) writeFrame(frame, readOutputFormat());
+}
+
+function readOutputFormat(args = process.argv.slice(2)): OutputFormat {
+  const formatArg = args.find((arg) => arg.startsWith("--format="));
+  const format = formatArg?.slice("--format=".length);
+  if (format === undefined || format === "plain") return "plain";
+  if (format === "claude-json") return "claude-json";
+  throw new Error(`Unsupported output format: ${format}`);
+}
+
+function writeFrame(frame: string, format: OutputFormat): void {
+  if (format === "plain") {
+    process.stdout.write(`${frame}\n`);
+  } else {
+    process.stdout.write(
+      `${JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "UserPromptSubmit",
+          additionalContext: frame,
+        },
+      })}\n`,
+    );
+  }
 }
 
 main().catch((error) => {
