@@ -7,13 +7,17 @@
   "dependencies": {
     "yaml": "^2.8.3"
   },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  },
   "workspaces": [
     "packages/*",
     "integrations/*"
   ],
   "scripts": {
-    "check": "node --check \"packages/core/src/index.ts\" && node --check \"packages/core/src/frame.ts\" && node --check \"packages/core/src/maintain.ts\" && node --check \"packages/mcp/src/descriptor.ts\" && node --check \"integrations/opencode/src/plugin.ts\" && node --check \"scripts/memory-arbor-prompt-frame.ts\" && node --check \"tests/core.test.ts\" && node --check \"tests/adapter.test.ts\" && node --check \"tests/prompt-frame.test.ts\"",
-    "smoke": "node \"tests/core.test.ts\" && node \"tests/adapter.test.ts\" && node \"tests/prompt-frame.test.ts\"",
+    "build:plugin-hooks": "node \"scripts/build-plugin-hooks.mjs\"",
+    "check": "node --experimental-strip-types --check \"packages/core/src/index.ts\" && node --experimental-strip-types --check \"packages/core/src/frame.ts\" && node --experimental-strip-types --check \"packages/core/src/maintain.ts\" && node --experimental-strip-types --check \"integrations/opencode/src/plugin.ts\" && node --experimental-strip-types --check \"scripts/memory-arbor-prompt-frame.ts\" && node --check \"scripts/build-plugin-hooks.mjs\" && node --experimental-strip-types --check \"tests/core.test.ts\" && node --experimental-strip-types --check \"tests/adapter.test.ts\" && node --experimental-strip-types --check \"tests/prompt-frame.test.ts\" && node \"scripts/build-plugin-hooks.mjs\" --check",
+    "smoke": "npm run build:plugin-hooks && node --experimental-strip-types \"tests/core.test.ts\" && node --experimental-strip-types \"tests/adapter.test.ts\" && node --experimental-strip-types \"tests/prompt-frame.test.ts\"",
     "sync:skills": "node \"scripts/sync-integration-skills.mjs\"",
     "test": "npm run check && npm run smoke"
   }

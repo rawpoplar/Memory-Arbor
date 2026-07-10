@@ -1,5 +1,8 @@
 {
   "name": "memory-arbor",
+  "owner": {
+    "name": "rawpoplar"
+  },
   "interface": {
     "displayName": "Memory Arbor"
   },

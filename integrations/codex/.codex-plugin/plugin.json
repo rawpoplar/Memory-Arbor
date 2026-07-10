@@ -4,7 +4,7 @@
   "description": "Memory Arbor Codex integration using shared skills and prompt-submit hooks.",
   "license": "Apache-2.0",
   "skills": "./skills/",
-  "hooks": "./hooks.json",
+  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Memory Arbor for Codex",
     "shortDescription": "Append Memory Arbor context before Codex prompts",

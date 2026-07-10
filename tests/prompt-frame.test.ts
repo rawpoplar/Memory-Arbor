@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,13 +13,14 @@ import {
 
 import test from "node:test";
 
-test("prompt frame hook emits loaded memory as plain frame by default", async () => {
+test("Codex plugin bundle emits loaded memory as a plain frame", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
   try {
     await writeLoadedStore(stateDir);
-    const result = runPromptFrame(stateDir);
+    const result = runPluginHook("codex", stateDir);
 
     assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
     assert.match(result.stdout, /^<memory_arbor_prompt_frame/);
     assert.match(result.stdout, /Hook Smoke/);
     assert.throws(() => JSON.parse(result.stdout));
@@ -28,13 +29,14 @@ test("prompt frame hook emits loaded memory as plain frame by default", async ()
   }
 });
 
-test("prompt frame hook emits Claude additionalContext JSON when requested", async () => {
+test("Claude Code plugin bundle emits additionalContext JSON", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
   try {
     await writeLoadedStore(stateDir);
-    const result = runPromptFrame(stateDir, ["--format=claude-json"]);
+    const result = runPluginHook("claude-code", stateDir, ["--format=claude-json"]);
 
     assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
     const output = JSON.parse(result.stdout);
     assert.deepEqual(Object.keys(output), ["hookSpecificOutput"]);
     assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
@@ -45,15 +47,55 @@ test("prompt frame hook emits Claude additionalContext JSON when requested", asy
   }
 });
 
-test("prompt frame hook emits nothing when no slots are loaded", async () => {
+test("plugin bundles emit nothing when no slots are loaded", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
   try {
-    const result = runPromptFrame(stateDir, ["--format=claude-json"]);
+    for (const host of ["claude-code", "codex"] as const) {
+      const result = runPluginHook(host, stateDir, ["--format=claude-json"]);
 
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stdout, "");
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stderr, "");
+      assert.equal(result.stdout, "");
+    }
   } finally {
     await rm(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("plugin bundles include YAML configuration support", async () => {
+  const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
+  try {
+    await writeLoadedStore(stateDir);
+    await writeFile(join(stateDir, "config.yaml"), "injection:\n  maxMemoryTokens: 900\n", "utf8");
+    const result = runPluginHook("codex", stateDir);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /memoryTokens: \d+\/900/);
+  } finally {
+    await rm(stateDir, { recursive: true, force: true });
+  }
+});
+
+test("Codex plugin bundle runs after being copied outside the repository", async () => {
+  const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-state-"));
+  const pluginDir = await mkdtemp(join(tmpdir(), "memory-arbor-plugin-"));
+  try {
+    await writeLoadedStore(stateDir);
+    await writeFile(join(stateDir, "config.yaml"), "injection:\n  maxMemoryTokens: 900\n", "utf8");
+    const bundle = fileURLToPath(
+      new URL("../integrations/codex/scripts/memory-arbor-prompt-frame.mjs", import.meta.url),
+    );
+    const copiedBundle = join(pluginDir, "memory-arbor-prompt-frame.mjs");
+    await copyFile(bundle, copiedBundle);
+    const result = runHook(copiedBundle, stateDir, pluginDir);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /memoryTokens: \d+\/900/);
+  } finally {
+    await rm(stateDir, { recursive: true, force: true });
+    await rm(pluginDir, { recursive: true, force: true });
   }
 });
 
@@ -75,12 +117,20 @@ async function writeLoadedStore(stateDir: string): Promise<void> {
   await writeFile(join(stateDir, "store.json"), `${JSON.stringify(store, null, 2)}\n`, "utf8");
 }
 
-function runPromptFrame(stateDir: string, args: string[] = []) {
+function runPluginHook(
+  host: "claude-code" | "codex",
+  stateDir: string,
+  args: string[] = [],
+) {
   const script = fileURLToPath(
-    new URL("../scripts/memory-arbor-prompt-frame.ts", import.meta.url),
+    new URL(`../integrations/${host}/scripts/memory-arbor-prompt-frame.mjs`, import.meta.url),
   );
-  return spawnSync(process.execPath, ["--experimental-strip-types", script, ...args], {
-    cwd: fileURLToPath(new URL("..", import.meta.url)),
+  return runHook(script, stateDir, fileURLToPath(new URL("..", import.meta.url)), args);
+}
+
+function runHook(script: string, stateDir: string, cwd: string, args: string[] = []) {
+  return spawnSync(process.execPath, [script, ...args], {
+    cwd,
     env: {
       ...process.env,
       MEMORY_ARBOR_HOME: stateDir,
