@@ -20,7 +20,7 @@ import {
   updateMemoryNode,
   type MemoryConfig,
   type MemoryStore,
-} from "../packages/core/src/index.ts";
+} from "@rawpoplar/memory-arbor-core";
 
 const NODE_KINDS = ["root", "branch", "leaf"] as const;
 const NODE_STATUSES = ["active", "archived"] as const;

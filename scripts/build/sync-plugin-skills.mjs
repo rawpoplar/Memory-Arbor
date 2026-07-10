@@ -3,12 +3,12 @@ import { dirname, join } from "node:path";
 
 const rootSkill = join("skills", "memory-context", "SKILL.md");
 const targets = [
-  join("integrations", "codex", "skills", "memory-context", "SKILL.md"),
-  join("integrations", "claude-code", "skills", "memory-context", "SKILL.md"),
+  join("plugins", "codex", "skills", "memory-context", "SKILL.md"),
+  join("plugins", "claude-code", "skills", "memory-context", "SKILL.md"),
 ];
 
 const notice =
-  "Generated copy. Edit `skills/memory-context/SKILL.md` at the repository root, then resync integration skills.\n\n";
+  "Generated copy. Edit `skills/memory-context/SKILL.md` at the repository root, then resync plugin skills.\n\n";
 const source = await readFile(rootSkill, "utf8");
 const content = source.replace(/---\r?\n\r?\n/, `---\n\n${notice}`);
 

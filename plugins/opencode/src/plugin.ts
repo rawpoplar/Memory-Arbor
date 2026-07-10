@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 import {
   buildMemoryMaintenancePrompt,
   maintainMemoryContext,
-} from "@rawpoplar/memory-arbor-core/maintain";
+} from "@rawpoplar/memory-arbor-tools";
 import {
   archiveMemoryNode,
   buildMemoryInjectionView,
@@ -36,7 +36,7 @@ import {
   type ContextRange,
   type TemporaryWorkspaceRef,
   type TemporaryWorkspaceStatus,
-} from "@rawpoplar/memory-arbor-core/frame";
+} from "@rawpoplar/memory-arbor-context";
 
 const schema = tool.schema;
 const NODE_KINDS = ["root", "branch", "leaf"] as const;

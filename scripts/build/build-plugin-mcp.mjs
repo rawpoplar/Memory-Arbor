@@ -2,17 +2,19 @@ import { mkdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { build } from "esbuild";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "..", "..");
 
 const entryPoint = resolve(
   root,
-  "scripts",
-  "memory-arbor-mcp.ts",
+  "packages",
+  "mcp",
+  "src",
+  "server.ts",
 );
 
 const outfile = resolve(
   root,
-  "integrations",
+  "plugins",
   "claude-code",
   "servers",
   "memory-arbor-mcp.mjs",

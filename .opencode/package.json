@@ -2,8 +2,10 @@
   "type": "module",
   "dependencies": {
     "@opencode-ai/plugin": "1.17.13",
+    "@rawpoplar/memory-arbor-context": "file:../packages/context",
     "@rawpoplar/memory-arbor-core": "file:../packages/core",
-    "@rawpoplar/memory-arbor-opencode": "file:../integrations/opencode",
+    "@rawpoplar/memory-arbor-opencode": "file:../plugins/opencode",
+    "@rawpoplar/memory-arbor-tools": "file:../packages/tools",
     "yaml": "^2.8.3"
   }
 }

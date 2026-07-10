@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "memory-arbor-claude-code",
-      "source": "./integrations/claude-code",
+      "source": "./plugins/claude-code",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

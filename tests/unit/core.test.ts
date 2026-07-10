@@ -11,7 +11,7 @@ import {
   readMemorySlots,
   searchMemoryNodes,
   updateMemoryNode,
-} from "../packages/core/src/index.ts";
+} from "../../packages/core/src/index.ts";
 
 test("memory core supports tree operations, search, slots, and archive cleanup", () => {
   const timestamp = "2026-01-01T00:00:00.000Z";

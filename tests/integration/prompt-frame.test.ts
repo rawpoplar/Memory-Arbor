@@ -9,7 +9,7 @@ import {
   createMemoryNode,
   defaultMemoryConfig,
   loadMemorySlot,
-} from "../packages/core/src/index.ts";
+} from "../../packages/core/src/index.ts";
 
 import test from "node:test";
 
@@ -84,7 +84,7 @@ test("Codex plugin bundle runs after being copied outside the repository", async
     await writeLoadedStore(stateDir);
     await writeFile(join(stateDir, "config.yaml"), "injection:\n  maxMemoryTokens: 900\n", "utf8");
     const bundle = fileURLToPath(
-      new URL("../integrations/codex/scripts/memory-arbor-prompt-frame.mjs", import.meta.url),
+      new URL("../../plugins/codex/scripts/memory-arbor-prompt-frame.mjs", import.meta.url),
     );
     const copiedBundle = join(pluginDir, "memory-arbor-prompt-frame.mjs");
     await copyFile(bundle, copiedBundle);
@@ -123,9 +123,9 @@ function runPluginHook(
   args: string[] = [],
 ) {
   const script = fileURLToPath(
-    new URL(`../integrations/${host}/scripts/memory-arbor-prompt-frame.mjs`, import.meta.url),
+    new URL(`../../plugins/${host}/scripts/memory-arbor-prompt-frame.mjs`, import.meta.url),
   );
-  return runHook(script, stateDir, fileURLToPath(new URL("..", import.meta.url)), args);
+  return runHook(script, stateDir, fileURLToPath(new URL("../..", import.meta.url)), args);
 }
 
 function runHook(script: string, stateDir: string, cwd: string, args: string[] = []) {

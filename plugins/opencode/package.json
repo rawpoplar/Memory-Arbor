@@ -6,7 +6,9 @@
   "license": "Apache-2.0",
   "main": "./src/plugin.ts",
   "dependencies": {
+    "@rawpoplar/memory-arbor-context": "workspace:*",
     "@rawpoplar/memory-arbor-core": "workspace:*",
+    "@rawpoplar/memory-arbor-tools": "workspace:*",
     "@opencode-ai/plugin": "1.14.28",
     "yaml": "^2.8.3"
   }

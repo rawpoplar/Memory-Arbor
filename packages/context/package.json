@@ -1,0 +1,13 @@
+{
+  "name": "@rawpoplar/memory-arbor-context",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/frame.ts"
+  },
+  "dependencies": {
+    "@rawpoplar/memory-arbor-core": "workspace:*"
+  }
+}

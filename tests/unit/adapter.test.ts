@@ -6,18 +6,18 @@ import {
   createMemoryNode,
   defaultMemoryConfig,
   loadMemorySlot,
-} from "../packages/core/src/index.ts";
+} from "../../packages/core/src/index.ts";
 import {
   applyContextMarkersToText,
   buildTemporaryWorkspaceStatus,
   formatContextRef,
   type ContextFrameStore,
   type ContextMarker,
-} from "../packages/core/src/frame.ts";
+} from "../../packages/context/src/frame.ts";
 import {
   buildMemoryMaintenancePrompt,
   maintainMemoryContext,
-} from "../packages/core/src/maintain.ts";
+} from "../../packages/tools/src/maintain.ts";
 
 test("adapter projection removes marked context and reports pressure", () => {
   const timestamp = "2026-01-01T00:00:00.000Z";

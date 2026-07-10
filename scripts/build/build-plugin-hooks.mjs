@@ -2,11 +2,11 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "..", "..");
 const entryPoint = resolve(root, "scripts", "memory-arbor-prompt-frame.ts");
 const outputs = [
-  resolve(root, "integrations", "claude-code", "scripts", "memory-arbor-prompt-frame.mjs"),
-  resolve(root, "integrations", "codex", "scripts", "memory-arbor-prompt-frame.mjs"),
+  resolve(root, "plugins", "claude-code", "scripts", "memory-arbor-prompt-frame.mjs"),
+  resolve(root, "plugins", "codex", "scripts", "memory-arbor-prompt-frame.mjs"),
 ];
 const check = process.argv.includes("--check");
 

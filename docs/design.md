@@ -45,9 +45,21 @@ v0.4 的核心原则：
 
 OpenCode、Codex、Claude Code、cc switch 可以通过各自 adapter 复用同一套记忆树。
 
+### packages/context
+
+`packages/context` 保存 frame、marker 和临时工作区预算逻辑。
+
+### packages/tools
+
+`packages/tools` 保存组合记忆树与 context 的 `memory_*` 业务工具实现。
+
+### packages/mcp
+
+`packages/mcp` 保存 MCP Server 与协议适配。
+
 ### OpenCode adapter
 
-`integrations/opencode/src/plugin.ts` 是当前 OpenCode adapter。
+`plugins/opencode/src/plugin.ts` 是当前 OpenCode adapter。
 
 它负责：
 
@@ -286,10 +298,13 @@ marker 状态：
 
 当前仓库结构：
 
-- `packages/core`：宿主无关的记忆树、frame、维护逻辑。
-- `integrations/opencode`：OpenCode 完整 adapter。
-- `integrations/codex`：Codex 降级插件壳。
-- `integrations/claude-code`：Claude Code 降级插件壳。
+- `packages/core`：宿主无关的记忆树和 slot。
+- `packages/context`：frame、marker 和预算逻辑。
+- `packages/tools`：`memory_*` 业务工具实现。
+- `packages/mcp`：MCP Server 与协议适配。
+- `plugins/opencode`：OpenCode 完整 adapter。
+- `plugins/codex`：Codex 降级插件壳。
+- `plugins/claude-code`：Claude Code 降级插件壳。
 
 OpenCode adapter 仍是完整接入：可以通过 hook 投影 messages，并用 system hook 注入维护提示。
 
@@ -314,13 +329,14 @@ npm.cmd run smoke
 
 ```powershell
 node --experimental-strip-types --check "packages\core\src\index.ts"
-node --experimental-strip-types --check "packages\core\src\frame.ts"
-node --experimental-strip-types --check "packages\core\src\maintain.ts"
-node --experimental-strip-types --check "integrations\opencode\src\plugin.ts"
-node --experimental-strip-types --check "tests\core.test.ts"
-node --experimental-strip-types --check "tests\adapter.test.ts"
-node --experimental-strip-types "tests\core.test.ts"
-node --experimental-strip-types "tests\adapter.test.ts"
+node --experimental-strip-types --check "packages\context\src\frame.ts"
+node --experimental-strip-types --check "packages\tools\src\maintain.ts"
+node --experimental-strip-types --check "packages\mcp\src\server.ts"
+node --experimental-strip-types --check "plugins\opencode\src\plugin.ts"
+node --experimental-strip-types --check "tests\unit\core.test.ts"
+node --experimental-strip-types --check "tests\unit\adapter.test.ts"
+node --experimental-strip-types "tests\unit\core.test.ts"
+node --experimental-strip-types "tests\unit\adapter.test.ts"
 ```
 
 关键验收点：

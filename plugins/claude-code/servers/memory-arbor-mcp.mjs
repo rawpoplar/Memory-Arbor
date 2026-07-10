@@ -14223,7 +14223,7 @@ var require_dist2 = __commonJS({
   }
 });
 
-// scripts/memory-arbor-mcp.ts
+// packages/mcp/src/server.ts
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -28256,7 +28256,7 @@ var StdioServerTransport = class {
   }
 };
 
-// scripts/memory-arbor-mcp.ts
+// packages/mcp/src/server.ts
 var import_yaml = __toESM(require_dist2(), 1);
 
 // packages/core/src/index.ts
@@ -28517,7 +28517,7 @@ function nowIso() {
   return (/* @__PURE__ */ new Date()).toISOString();
 }
 
-// scripts/memory-arbor-mcp.ts
+// packages/mcp/src/server.ts
 var NODE_STATUSES = ["active", "archived"];
 var LOAD_MODES = ["replace", "append"];
 var home = process.env.USERPROFILE || process.env.HOME || ".";

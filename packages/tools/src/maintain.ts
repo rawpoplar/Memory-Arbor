@@ -7,14 +7,14 @@ import {
   type MemoryNodeKind,
   type MemorySlot,
   type MemoryStore,
-} from "./index.ts";
+} from "@rawpoplar/memory-arbor-core";
 import {
   parseContextRef,
   sameContextTarget,
   type ContextFrameStore,
   type ContextMarker,
   type ContextMarkerStatus,
-} from "./frame.ts";
+} from "@rawpoplar/memory-arbor-context";
 
 export type MaintainLoadMode = "replace" | "append";
 

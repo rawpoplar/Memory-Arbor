@@ -1,4 +1,4 @@
-import { estimateTokens } from "./index.ts";
+import { estimateTokens } from "@rawpoplar/memory-arbor-core";
 
 export type ContextMarkerStatus = "memorized" | "discarded";
 export type ContextPressure = "normal" | "near_limit" | "over_limit";
