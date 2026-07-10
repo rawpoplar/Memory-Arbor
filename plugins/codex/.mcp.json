@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "memory-arbor": {
+      "cwd": ".",
+      "command": "node",
+      "args": [
+        "./servers/memory-arbor-mcp.mjs"
+      ]
+    }
+  }
+}

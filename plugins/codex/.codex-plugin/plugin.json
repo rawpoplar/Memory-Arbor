@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Memory Arbor for Codex",
     "shortDescription": "Append Memory Arbor context before Codex prompts",

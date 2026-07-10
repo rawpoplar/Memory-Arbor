@@ -86,7 +86,7 @@ opencode
 
 Claude Code 当前是 prompt hook 降级接入：已安装插件的 `UserPromptSubmit` hook 运行插件内 bundle，把 `store.json` 中已装载 slots 追加进本轮 prompt 可见上下文。
 
-它不能改写或删除宿主原始会话上下文，也不会暴露 `memory_*` 工具。`~/.memory-arbor/store.json` 为空或不存在时，hook 不会注入记忆正文。
+它不能改写或删除宿主原始会话上下文，但插件内的 MCP Server 会暴露 `memory_*` 工具。`~/.memory-arbor/store.json` 为空或不存在时，hook 不会注入记忆正文。
 
 在 Claude Code 中添加本仓库 marketplace，然后安装插件：
 
@@ -101,7 +101,7 @@ Claude Code 当前是 prompt hook 降级接入：已安装插件的 `UserPromptS
 
 Codex 当前也是 prompt hook 降级接入：已安装插件的 `UserPromptSubmit` hook 运行插件内 bundle，把 `store.json` 中已装载 slots 追加进本轮 prompt 可见上下文。
 
-它不能改写或删除宿主原始会话上下文，也不会暴露 `memory_*` 工具。`~/.memory-arbor/store.json` 为空或不存在时，hook 不会注入记忆正文。
+它不能改写或删除宿主原始会话上下文，但插件内的 MCP Server 会暴露 `memory_*` 工具。`~/.memory-arbor/store.json` 为空或不存在时，hook 不会注入记忆正文。
 
 先注册本仓库 marketplace：
 

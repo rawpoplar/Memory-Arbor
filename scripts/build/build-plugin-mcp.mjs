@@ -12,41 +12,52 @@ const entryPoint = resolve(
   "server.ts",
 );
 
-const outfile = resolve(
-  root,
-  "plugins",
-  "claude-code",
-  "servers",
-  "memory-arbor-mcp.mjs",
-);
+const outfiles = [
+  resolve(
+    root,
+    "plugins",
+    "claude-code",
+    "servers",
+    "memory-arbor-mcp.mjs",
+  ),
+  resolve(
+    root,
+    "plugins",
+    "codex",
+    "servers",
+    "memory-arbor-mcp.mjs",
+  ),
+];
 
 const check = process.argv.includes("--check");
 
-await mkdir(dirname(outfile), { recursive: true });
+for (const outfile of outfiles) {
+  await mkdir(dirname(outfile), { recursive: true });
 
-const result = await build({
-  entryPoints: [entryPoint],
-  bundle: true,
-  format: "esm",
-  platform: "node",
-  target: "node22",
-  outfile,
-  write: !check,
-  banner: {
-    js: [
-      'import { createRequire } from "node:module";',
-      "const require = createRequire(import.meta.url);",
-    ].join("\n"),
-  },
-});
+  const result = await build({
+    entryPoints: [entryPoint],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    target: "node22",
+    outfile,
+    write: !check,
+    banner: {
+      js: [
+        'import { createRequire } from "node:module";',
+        "const require = createRequire(import.meta.url);",
+      ].join("\n"),
+    },
+  });
 
-if (check) {
-  const expected = result.outputFiles?.[0]?.contents;
-  const actual = await readFile(outfile);
+  if (check) {
+    const expected = result.outputFiles?.[0]?.contents;
+    const actual = await readFile(outfile);
 
-  if (!expected || !actual.equals(expected)) {
-    throw new Error(
-      `Plugin MCP bundle is stale: ${outfile}`,
-    );
+    if (!expected || !actual.equals(expected)) {
+      throw new Error(
+        `Plugin MCP bundle is stale: ${outfile}`,
+      );
+    }
   }
 }
