@@ -1,10 +1,9 @@
 {
   "name": "memory-arbor-claude-code",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Memory Arbor Claude Code integration using shared skills and prompt-submit hooks.",
   "license": "Apache-2.0",
   "skills": "./skills/",
-  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Memory Arbor for Claude Code",
     "shortDescription": "Append Memory Arbor context before Claude Code prompts",
