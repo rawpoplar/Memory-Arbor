@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
   archiveMemoryNode,
+  buildMemoryInjectionView,
   moveMemoryNode,
   normalizeMemoryConfig,
   normalizeMemoryStore,
@@ -76,7 +77,6 @@ export function createMemoryArborTools(
     configFile: join(base, "config.yaml"),
     frameFile: join(base, "context-frame.json"),
   };
-
   async function readJson(path: string): Promise<unknown | null> {
     try {
       return JSON.parse(await readFile(path, "utf8"));
@@ -200,6 +200,7 @@ export function createMemoryArborTools(
         frameVersion: frame.version,
         slots: readMemorySlots(store),
         contextFrame: frame,
+        memoryProjection: buildMemoryInjectionView(store, config),
       };
     },
 

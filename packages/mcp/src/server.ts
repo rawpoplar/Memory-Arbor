@@ -144,7 +144,7 @@ server.registerTool(
   "memory_status",
   {
     description:
-      "Read current slots, context frame, temporary workspace pressure, and state versions.",
+      "Read current slots, context frame, temporary workspace pressure, state versions, and the current loaded-memory projection.",
   },
   async () => mcpResult(await memory.memoryStatus()),
 );

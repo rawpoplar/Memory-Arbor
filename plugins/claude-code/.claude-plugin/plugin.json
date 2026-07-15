@@ -1,13 +1,13 @@
 {
   "name": "memory-arbor-claude-code",
   "version": "0.4.1",
-  "description": "Memory Arbor Claude Code integration using shared skills and prompt-submit hooks.",
+  "description": "Memory Arbor Claude Code integration using shared skills, MCP tools, and incremental prompt hooks.",
   "license": "Apache-2.0",
   "skills": "./skills/",
   "interface": {
     "displayName": "Memory Arbor for Claude Code",
-    "shortDescription": "Append Memory Arbor context before Claude Code prompts",
-    "longDescription": "Use Memory Arbor skills and a UserPromptSubmit hook from Claude Code. This prompt-hook adapter can append loaded memory context before each prompt, but cannot rewrite or delete prior host conversation messages.",
+    "shortDescription": "Load Memory Arbor context through memory_status",
+    "longDescription": "Use Memory Arbor skills and MCP tools from Claude Code. memory_status explicitly returns the loaded-memory projection; prompt hooks only send later changes, never a new-session snapshot.",
     "developerName": "rawpoplar",
     "category": "Developer Tools"
   }

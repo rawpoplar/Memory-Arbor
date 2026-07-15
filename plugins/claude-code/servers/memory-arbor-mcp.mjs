@@ -28566,6 +28566,44 @@ function readMemorySlots(store) {
     };
   });
 }
+function buildMemoryInjectionView(store, config2 = defaultMemoryConfig()) {
+  let usedTokens = 0;
+  let truncated = false;
+  const slots = [];
+  for (const slot of readMemorySlots(store)) {
+    const nodes = [];
+    for (const slotNode of slot.nodes) {
+      const node = findActiveNode(store, slotNode.id);
+      if (!node) continue;
+      if (usedTokens + node.tokenEstimate > config2.injection.maxMemoryTokens) {
+        truncated = true;
+        continue;
+      }
+      usedTokens += node.tokenEstimate;
+      nodes.push({
+        id: node.id,
+        title: node.title,
+        summary: node.summary,
+        content: node.content,
+        treePath: buildTreePath(store, node.id),
+        tags: node.tags,
+        tokenEstimate: node.tokenEstimate,
+        version: node.version
+      });
+    }
+    slots.push({
+      ...slot,
+      nodes
+    });
+  }
+  return {
+    version: store.version,
+    maxMemoryTokens: config2.injection.maxMemoryTokens,
+    usedTokens,
+    truncated,
+    slots
+  };
+}
 function estimateTokens(text) {
   return Math.max(1, Math.ceil(text.length / 4));
 }
@@ -29161,7 +29199,8 @@ function createMemoryArborTools(options = {}) {
         storeVersion: store.version,
         frameVersion: frame.version,
         slots: readMemorySlots(store),
-        contextFrame: frame
+        contextFrame: frame,
+        memoryProjection: buildMemoryInjectionView(store, config2)
       };
     },
     async memoryAdmin(input) {
@@ -29356,7 +29395,7 @@ server.registerTool(
 server.registerTool(
   "memory_status",
   {
-    description: "Read current slots, context frame, temporary workspace pressure, and state versions."
+    description: "Read current slots, context frame, temporary workspace pressure, state versions, and the current loaded-memory projection."
   },
   async () => mcpResult(await memory.memoryStatus())
 );

@@ -1,11 +1,11 @@
 # Memory Arbor Codex Integration
 
-This integration uses a prompt hook and the bundled Memory Arbor MCP server.
-Codex does not get an OpenCode-style message transform hook here, so the plugin
-can append loaded memory context but cannot delete or rewrite host conversation
-context.
+This integration uses the bundled Memory Arbor MCP server. It does not load
+memory automatically when a session starts. Call `memory_status` to return the
+loaded-memory snapshot; later `memory_apply` or `memory_admin` results contain
+only node upserts or removals.
 
 The MCP server exposes `memory_query`, `memory_apply`, `memory_status`, and
 `memory_admin` against the shared `MEMORY_ARBOR_HOME` store.
 
-Use a new Codex session to continue from the same `MEMORY_ARBOR_HOME` store.
+Each MCP instance keeps its own projection after `memory_status` is called.

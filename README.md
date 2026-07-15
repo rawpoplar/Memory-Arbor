@@ -27,8 +27,8 @@ packages/context/            frame、marker 和预算逻辑。
 packages/tools/              四个 memory façade 的业务实现。
 packages/mcp/                MCP Server 与协议适配。
 plugins/opencode/            OpenCode 完整版 adapter。
-plugins/codex/               Codex prompt-hook 插件。
-plugins/claude-code/         Claude Code prompt-hook 插件。
+plugins/codex/               Codex MCP 插件。
+plugins/claude-code/         Claude Code MCP 插件。
 skills/memory-context/       唯一手写 skill 源文件。
 scripts/build/               构建 plugin bundle。
 tests/unit/                  基于 node:test 的单元测试。
@@ -84,9 +84,7 @@ opencode
 
 ### Claude Code
 
-Claude Code 当前是 prompt hook 降级接入：已安装插件的 `UserPromptSubmit` hook 运行插件内 bundle，把 `store.json` 中已装载 slots 追加进本轮 prompt 可见上下文。
-
-它不能改写或删除宿主原始会话上下文，但插件内的 MCP Server 会暴露 `memory_query`、`memory_apply`、`memory_status` 和 `memory_admin`。`~/.memory-arbor/store.json` 为空或不存在时，hook 不会注入记忆正文。
+Claude Code 不会在新会话自动加载记忆。模型需要调用 `memory_status`，该工具结果才会返回当前已装载 slots 的完整记忆投影；后续内容变化由 hook 只输出节点 delta。
 
 在 Claude Code 中添加本仓库 marketplace，然后安装插件：
 
@@ -95,13 +93,11 @@ Claude Code 当前是 prompt hook 降级接入：已安装插件的 `UserPromptS
 /plugin install memory-arbor-claude-code@memory-arbor
 ```
 
-安装或启用后执行 `/reload-plugins`，再打开新会话。插件 hook 使用 `additionalContext` JSON 注入；如果 hook 未触发，先用 `/hooks` 确认已安装插件的 hook 是否被加载和信任。
+安装或启用后执行 `/reload-plugins`，再打开新会话。
 
 ### Codex
 
-Codex 当前也是 prompt hook 降级接入：已安装插件的 `UserPromptSubmit` hook 运行插件内 bundle，把 `store.json` 中已装载 slots 追加进本轮 prompt 可见上下文。
-
-它不能改写或删除宿主原始会话上下文，但插件内的 MCP Server 会暴露 `memory_query`、`memory_apply`、`memory_status` 和 `memory_admin`。`~/.memory-arbor/store.json` 为空或不存在时，hook 不会注入记忆正文。
+Codex 不会在新会话自动加载记忆。模型需要调用 `memory_status`，该工具结果才会返回当前已装载 slots 的完整记忆投影；后续内容变化由 hook 只输出节点 delta。
 
 先注册本仓库 marketplace：
 
@@ -110,8 +106,6 @@ codex plugin marketplace add "D:\repos\Memory Arbor"
 ```
 
 然后执行 `codex plugin add memory-arbor-codex@memory-arbor`，并打开新会话。CLI 内可以使用 `/plugins` 查看 marketplace 与插件状态。
-
-Codex hook 使用普通 stdout 注入 prompt frame。安装不等于信任 hook；如果 Codex 提示 hook 需要 review，请用 `/hooks` 检查并信任当前 hook 定义。
 
 如果要启用示例配置，可以把 `config.example.yaml` 复制到 Memory Arbor 状态目录并改名为 `config.yaml`：
 
@@ -171,7 +165,7 @@ node --experimental-strip-types "tests\unit\adapter.test.ts"
 - `packages/core` 必须保持宿主无关。
 - skill 只描述如何消费 Memory Arbor 上下文。
 - OpenCode 专属的上下文投影逻辑属于 adapter。
-- Codex 和 Claude Code 只能通过 prompt hook 降级接入，不能改写宿主原始会话上下文。
+- Codex 和 Claude Code 由 `memory_status` 按需加载记忆；prompt hook 不会在新会话输出完整快照，只输出后续节点 delta。
 - marker 是外部状态，因为 `messages.transform` 只修改本轮请求视图，不会修改已保存的聊天历史。
 - `system.transform` 只注入维护提示，不注入完整记忆正文。
 

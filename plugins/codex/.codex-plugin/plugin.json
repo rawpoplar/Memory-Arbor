@@ -1,15 +1,15 @@
 {
   "name": "memory-arbor-codex",
   "version": "0.4.0",
-  "description": "Memory Arbor Codex integration using shared skills and prompt-submit hooks.",
+  "description": "Memory Arbor Codex integration using shared skills, MCP tools, and incremental prompt hooks.",
   "license": "Apache-2.0",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Memory Arbor for Codex",
-    "shortDescription": "Append Memory Arbor context before Codex prompts",
-    "longDescription": "Use Memory Arbor skills and a UserPromptSubmit hook from Codex. This prompt-hook adapter can append loaded memory context before each prompt, but cannot rewrite or delete prior host conversation messages.",
+    "shortDescription": "Load Memory Arbor context through memory_status",
+    "longDescription": "Use Memory Arbor skills and MCP tools from Codex. memory_status explicitly returns the loaded-memory projection; prompt hooks only send later changes, never a new-session snapshot.",
     "developerName": "rawpoplar",
     "category": "Developer Tools",
     "capabilities": [
@@ -17,8 +17,8 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Load relevant Memory Arbor context for this repository.",
-      "Continue from the shared Memory Arbor store."
+      "Use the shared Memory Arbor store for this repository.",
+      "Call memory_status when loaded memory is needed, then apply later prompt deltas."
     ],
     "websiteURL": "https://github.com/rawpoplar/memory-arbor",
     "privacyPolicyURL": "https://github.com/rawpoplar/memory-arbor",

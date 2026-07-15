@@ -13,7 +13,7 @@ import {
 
 import test from "node:test";
 
-test("Codex plugin bundle emits loaded memory as a plain frame", async () => {
+test("Codex plugin bundle does not emit an initial loaded-memory snapshot", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
   try {
     await writeLoadedStore(stateDir);
@@ -21,15 +21,13 @@ test("Codex plugin bundle emits loaded memory as a plain frame", async () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stderr, "");
-    assert.match(result.stdout, /^<memory_arbor_prompt_frame/);
-    assert.match(result.stdout, /Hook Smoke/);
-    assert.throws(() => JSON.parse(result.stdout));
+    assert.equal(result.stdout, "");
   } finally {
     await rm(stateDir, { recursive: true, force: true });
   }
 });
 
-test("Claude Code plugin bundle emits additionalContext JSON", async () => {
+test("Claude Code plugin bundle does not emit initial additionalContext JSON", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
   try {
     await writeLoadedStore(stateDir);
@@ -37,11 +35,7 @@ test("Claude Code plugin bundle emits additionalContext JSON", async () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stderr, "");
-    const output = JSON.parse(result.stdout);
-    assert.deepEqual(Object.keys(output), ["hookSpecificOutput"]);
-    assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
-    assert.match(output.hookSpecificOutput.additionalContext, /<memory_arbor_prompt_frame/);
-    assert.match(output.hookSpecificOutput.additionalContext, /Hook Smoke/);
+    assert.equal(result.stdout, "");
   } finally {
     await rm(stateDir, { recursive: true, force: true });
   }
@@ -62,16 +56,16 @@ test("plugin bundles emit nothing when no slots are loaded", async () => {
   }
 });
 
-test("plugin bundles include YAML configuration support", async () => {
+test("plugin bundles respect the configured injection token budget", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
   try {
     await writeLoadedStore(stateDir);
-    await writeFile(join(stateDir, "config.yaml"), "injection:\n  maxMemoryTokens: 900\n", "utf8");
+    await writeFile(join(stateDir, "config.yaml"), "injection:\n  maxMemoryTokens: 1\n", "utf8");
     const result = runPluginHook("codex", stateDir);
 
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stderr, "");
-    assert.match(result.stdout, /memoryTokens: \d+\/900/);
+    assert.equal(result.stdout, "");
   } finally {
     await rm(stateDir, { recursive: true, force: true });
   }
@@ -92,10 +86,26 @@ test("Codex plugin bundle runs after being copied outside the repository", async
 
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stderr, "");
-    assert.match(result.stdout, /memoryTokens: \d+\/900/);
+    assert.equal(result.stdout, "");
   } finally {
     await rm(stateDir, { recursive: true, force: true });
     await rm(pluginDir, { recursive: true, force: true });
+  }
+});
+
+test("plugin bundles keep a new-session baseline without output", async () => {
+  const stateDir = await mkdtemp(join(tmpdir(), "memory-arbor-test-"));
+  try {
+    await writeLoadedStore(stateDir);
+    const first = runPluginHook("codex", stateDir);
+    const second = runPluginHook("codex", stateDir);
+
+    assert.equal(first.status, 0, first.stderr);
+    assert.equal(first.stdout, "");
+    assert.equal(second.status, 0, second.stderr);
+    assert.equal(second.stdout, "");
+  } finally {
+    await rm(stateDir, { recursive: true, force: true });
   }
 });
 
@@ -135,6 +145,7 @@ function runHook(script: string, stateDir: string, cwd: string, args: string[] =
       ...process.env,
       MEMORY_ARBOR_HOME: stateDir,
     },
+    input: JSON.stringify({ session_id: "prompt-frame-test" }),
     encoding: "utf8",
   });
 }

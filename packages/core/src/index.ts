@@ -135,6 +135,7 @@ export type MemoryInjectionView = {
         treePath: string
         tags: string[]
         tokenEstimate: number
+        version: number
       }>
     }
   >
@@ -569,6 +570,7 @@ export function buildMemoryInjectionView(store: MemoryStore, config = defaultMem
         treePath: buildTreePath(store, node.id),
         tags: node.tags,
         tokenEstimate: node.tokenEstimate,
+        version: node.version,
       })
     }
     slots.push({
