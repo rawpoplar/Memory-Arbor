@@ -262,7 +262,7 @@ export function buildMemoryMaintenancePrompt(
     options.storeVersion === undefined
       ? ""
       : `memoryStoreVersion: ${options.storeVersion}`,
-    "Use memory_maintain_context before answering if older temporary refs should be preserved or cleared.",
+    "Use memory_apply before answering if older temporary refs should be preserved or cleared.",
     "For useful older refs, create or update memory nodes and include those refs in markRefs.",
     "For useless older refs, include them in discardRefs.",
     "Do not mark the latest user message unless the user explicitly asks.",

@@ -21,7 +21,6 @@ import {
 const schema = tool.schema;
 const NODE_KINDS = ["root", "branch", "leaf"] as const;
 const NODE_STATUSES = ["active", "archived"] as const;
-const MARKER_STATUSES = ["memorized", "discarded"] as const;
 const LOAD_MODES = ["replace", "append"] as const;
 
 type OpenCodeMessage = {
@@ -49,51 +48,14 @@ export const MemoryContextPlugin: Plugin = async () => {
 
   return {
     tool: {
-      memory_create_node: tool({
+      memory_query: tool({
         description:
-          "Create one Memory Arbor node in the host-independent memory tree.",
-        args: {
-          title: schema.string().min(1).describe("Short memory node title."),
-          summary: schema
-            .string()
-            .optional()
-            .describe("Short summary. Defaults to a content/title summary."),
-          content: schema
-            .string()
-            .optional()
-            .describe("Detailed memory content."),
-          tags: schema
-            .array(schema.string())
-            .optional()
-            .describe("Search tags."),
-          parentId: schema
-            .string()
-            .optional()
-            .describe("Parent node id. Defaults to root."),
-          nodeKind: schema
-            .enum(NODE_KINDS)
-            .optional()
-            .describe("Node kind. Defaults to leaf."),
-          sourceRefs: schema
-            .array(schema.string())
-            .optional()
-            .describe("Optional source references."),
-        },
-        async execute(args) {
-          return result(await memory.memoryCreateNode(args));
-        },
-      }),
-
-      memory_search: tool({
-        description:
-          "Search active or archived memory nodes by query, tag, and status.",
+          "Search Memory Arbor nodes and optionally open selected results in the same call.",
         args: {
           query: schema
             .string()
             .optional()
-            .describe(
-              "Case-insensitive search over title, summary, content, and tags.",
-            ),
+            .describe("Case-insensitive search over title, summary, content, and tags."),
           tag: schema.string().optional().describe("Filter by one tag."),
           status: schema
             .enum(NODE_STATUSES)
@@ -105,183 +67,19 @@ export const MemoryContextPlugin: Plugin = async () => {
             .positive()
             .optional()
             .describe("Maximum result count. Defaults to 10."),
-        },
-        async execute(args) {
-          return result(await memory.memorySearch(args));
-        },
-      }),
-
-      memory_open: tool({
-        description:
-          "Open one memory node and return its breadcrumb, tree path, and child directory.",
-        args: {
-          id: schema.string().min(1).describe("Memory node id."),
-        },
-        async execute(args) {
-          return result(await memory.memoryOpen(args.id));
-        },
-      }),
-
-      memory_update_node: tool({
-        description:
-          "Update one memory node. Omitted fields are left unchanged.",
-        args: {
-          id: schema.string().min(1).describe("Memory node id."),
-          title: schema
-            .string()
-            .min(1)
-            .optional()
-            .describe("Replacement title."),
-          summary: schema
-            .string()
-            .min(1)
-            .optional()
-            .describe("Replacement summary."),
-          content: schema
-            .string()
-            .min(1)
-            .optional()
-            .describe("Replacement content."),
-          tags: schema
+          openIds: schema
             .array(schema.string())
             .optional()
-            .describe("Replacement tags."),
-          nodeKind: schema
-            .enum(NODE_KINDS)
-            .optional()
-            .describe("Replacement node kind."),
-          sourceRefs: schema
-            .array(schema.string())
-            .optional()
-            .describe("Replacement source references."),
+            .describe("Optional memory node ids to expand after searching."),
         },
         async execute(args) {
-          return result(await memory.memoryUpdateNode(args));
+          return result(await memory.memoryQuery(args));
         },
       }),
 
-      memory_archive_node: tool({
+      memory_apply: tool({
         description:
-          "Archive one memory node subtree and remove archived nodes from all loaded slots.",
-        args: {
-          id: schema.string().min(1).describe("Memory node id."),
-        },
-        async execute(args) {
-          return result(await memory.memoryArchiveNode(args.id));
-        },
-      }),
-
-      memory_move_node: tool({
-        description: "Move one memory node under a new active parent node.",
-        args: {
-          id: schema.string().min(1).describe("Memory node id."),
-          newParentId: schema.string().min(1).describe("New parent node id."),
-        },
-        async execute(args) {
-          return result(await memory.memoryMoveNode(args));
-        },
-      }),
-
-      memory_load_slot: tool({
-        description:
-          "Load active memory nodes into a configured memory slot for future context-frame projection.",
-        args: {
-          slot: schema.string().min(1).describe("Configured slot name."),
-          nodeIds: schema
-            .array(schema.string())
-            .min(1)
-            .describe("Memory node ids to load."),
-          mode: schema
-            .enum(["replace", "append"])
-            .optional()
-            .describe("Load mode. Defaults to replace."),
-        },
-        async execute(args) {
-          return result(await memory.memoryLoadSlot(args));
-        },
-      }),
-
-      memory_read_slots: tool({
-        description:
-          "Read current configured memory slots and their loaded active memory nodes.",
-        args: {},
-        async execute() {
-          return result(await memory.memoryReadSlots());
-        },
-      }),
-
-      memory_mark_context: tool({
-        description:
-          "Mark temporary workspace refs as memorized or discarded in the external context frame store.",
-        args: {
-          refs: schema
-            .array(schema.string())
-            .optional()
-            .describe(
-              "Temporary workspace refs to mark. A ref may be a full part or sourceKey@start:end.",
-            ),
-          ranges: schema
-            .array(
-              schema.object({
-                ref: schema
-                  .string()
-                  .min(1)
-                  .describe("Temporary workspace ref or source key."),
-                start: schema
-                  .number()
-                  .int()
-                  .nonnegative()
-                  .describe("Original text start offset."),
-                end: schema
-                  .number()
-                  .int()
-                  .positive()
-                  .describe("Original text end offset."),
-              }),
-            )
-            .optional()
-            .describe("Explicit text ranges to mark."),
-          status: schema.enum(MARKER_STATUSES).describe("Marker status."),
-          nodeId: schema
-            .string()
-            .optional()
-            .describe("Required when status is memorized."),
-        },
-        async execute(args) {
-          return result(await memory.memoryMarkContext(args));
-        },
-      }),
-
-      memory_unmark_context: tool({
-        description:
-          "Remove external context markers by marker id or temporary workspace ref.",
-        args: {
-          markerIds: schema
-            .array(schema.string())
-            .optional()
-            .describe("Marker ids returned by memory_read_context_frame."),
-          refs: schema
-            .array(schema.string())
-            .optional()
-            .describe("Refs or sourceKey@start:end targets to unmark."),
-        },
-        async execute(args) {
-          return result(await memory.memoryUnmarkContext(args));
-        },
-      }),
-
-      memory_read_context_frame: tool({
-        description:
-          "Read external context frame state, markers, recent temporary workspace refs, and pressure status.",
-        args: {},
-        async execute() {
-          return result(await memory.memoryReadContextFrame());
-        },
-      }),
-
-      memory_maintain_context: tool({
-        description:
-          "Deterministically batch memory node create/update, context marking, slot loading, and ref discarding.",
+          "Create or update memory, mark refs as memorized, discard refs, and load slots in one apply operation.",
         args: {
           createNodes: schema
             .array(
@@ -382,7 +180,42 @@ export const MemoryContextPlugin: Plugin = async () => {
             .describe("Explicit slot load operations."),
         },
         async execute(args) {
-          return result(await memory.memoryMaintainContext(args));
+          return result(await memory.memoryApply(args));
+        },
+      }),
+
+      memory_status: tool({
+        description:
+          "Read current slots, context frame, temporary workspace pressure, and state versions.",
+        args: {},
+        async execute() {
+          return result(await memory.memoryStatus());
+        },
+      }),
+
+      memory_admin: tool({
+        description:
+          "Perform a low-frequency repair: archive a node, move a node, or unmark context refs.",
+        args: {
+          action: schema
+            .enum(["archive", "move", "unmark"])
+            .describe("Administrative operation to perform."),
+          id: schema.string().optional().describe("Required for archive and move."),
+          newParentId: schema
+            .string()
+            .optional()
+            .describe("Required for move."),
+          markerIds: schema
+            .array(schema.string())
+            .optional()
+            .describe("Marker ids to remove when action is unmark."),
+          refs: schema
+            .array(schema.string())
+            .optional()
+            .describe("Context refs to unmark when action is unmark."),
+        },
+        async execute(args) {
+          return result(await memory.memoryAdmin(args));
         },
       }),
     },
@@ -529,8 +362,8 @@ function buildMemoryFrameText(
       : [
           "<workspace_pressure>",
           `status: ${workspace.pressure}`,
-          "Call memory_create_node or memory_update_node for older useful temporary refs, then memory_mark_context.",
-          "If a ref is useless, call memory_mark_context with status discarded.",
+          "Call memory_apply to create or update memory and mark older useful temporary refs.",
+          "Use memory_apply with discardRefs when a ref is useless.",
           "Do not mark the latest user message unless the user explicitly asks.",
           "</workspace_pressure>",
         ];

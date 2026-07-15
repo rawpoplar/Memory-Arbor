@@ -29045,6 +29045,7 @@ function unique(values) {
 }
 
 // packages/tools/src/index.ts
+var INTERACTION_PROTOCOL_VERSION = 1;
 function createMemoryArborTools(options = {}) {
   const home = process.env.USERPROFILE || process.env.HOME || ".";
   const base = options.base || process.env.MEMORY_ARBOR_HOME || join(home, ".memory-arbor");
@@ -29100,8 +29101,8 @@ function createMemoryArborTools(options = {}) {
     }
     return {
       ...publicPayload,
-      version: store.version,
-      ...paths
+      interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+      storeVersion: store.version
     };
   }
   return {
@@ -29111,247 +29112,23 @@ function createMemoryArborTools(options = {}) {
     readFrame,
     writeStore,
     writeFrame,
-    async memoryCreateNode(input) {
-      return updateStore((store) => {
-        const created = createMemoryNode(store, input, { id: memoryId() });
-        if (created.status !== "ok") {
-          return {
-            status: created.status,
-            action: "memory_create_node",
-            message: created.message,
-            changed: false
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_create_node",
-          node: created.value
-        };
-      });
-    },
-    async memorySearch(input) {
+    async memoryQuery(input) {
       const config2 = await readConfig();
       const store = await readStore(config2);
       return {
         status: "ok",
-        action: "memory_search",
-        version: store.version,
+        action: "memory_query",
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        storeVersion: store.version,
         nodes: searchMemoryNodes(store, input.query ?? "", {
           tag: input.tag,
           status: input.status,
           limit: input.limit
-        })
+        }),
+        opened: (input.openIds ?? []).map((id) => openMemoryNode(store, id))
       };
     },
-    async memoryOpen(id) {
-      const config2 = await readConfig();
-      const store = await readStore(config2);
-      const view = openMemoryNode(store, id);
-      return {
-        status: view ? "ok" : "not_found",
-        action: "memory_open",
-        version: store.version,
-        view
-      };
-    },
-    async memoryUpdateNode(input) {
-      return updateStore((store) => {
-        const updated = updateMemoryNode(store, input.id, {
-          title: input.title,
-          summary: input.summary,
-          content: input.content,
-          tags: input.tags,
-          nodeKind: input.nodeKind,
-          sourceRefs: input.sourceRefs
-        });
-        if (updated.status !== "ok") {
-          return {
-            status: updated.status,
-            action: "memory_update_node",
-            message: updated.message,
-            changed: false
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_update_node",
-          node: updated.value
-        };
-      });
-    },
-    async memoryArchiveNode(id) {
-      return updateStore((store) => {
-        const archived = archiveMemoryNode(store, id);
-        if (archived.status !== "ok") {
-          return {
-            status: archived.status,
-            action: "memory_archive_node",
-            message: archived.message,
-            changed: false
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_archive_node",
-          ...archived.value
-        };
-      });
-    },
-    async memoryMoveNode(input) {
-      return updateStore((store) => {
-        const moved = moveMemoryNode(store, input.id, input.newParentId);
-        if (moved.status !== "ok") {
-          return {
-            status: moved.status,
-            action: "memory_move_node",
-            message: moved.message,
-            changed: false
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_move_node",
-          node: moved.value
-        };
-      });
-    },
-    async memoryLoadSlot(input) {
-      return updateStore((store) => {
-        const loaded = loadMemorySlot(
-          store,
-          input.slot,
-          input.nodeIds,
-          input.mode ?? "replace"
-        );
-        if (loaded.status !== "ok") {
-          return {
-            status: loaded.status,
-            action: "memory_load_slot",
-            message: loaded.message,
-            changed: false
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_load_slot",
-          slot: loaded.value
-        };
-      });
-    },
-    async memoryReadSlots() {
-      const config2 = await readConfig();
-      const store = await readStore(config2);
-      return {
-        status: "ok",
-        action: "memory_read_slots",
-        version: store.version,
-        slots: readMemorySlots(store),
-        ...paths
-      };
-    },
-    async memoryMarkContext(input) {
-      const config2 = await readConfig();
-      const store = await readStore(config2);
-      const frame = await readFrame(config2);
-      const targets = contextTargets(input.refs, input.ranges);
-      if (targets.length === 0) {
-        return {
-          status: "invalid",
-          action: "memory_mark_context",
-          message: "At least one valid ref or range is required.",
-          frameFile: paths.frameFile
-        };
-      }
-      if (input.status === "memorized") {
-        if (!input.nodeId) {
-          return {
-            status: "invalid",
-            action: "memory_mark_context",
-            message: "nodeId is required when status is memorized.",
-            frameFile: paths.frameFile
-          };
-        }
-        const node = openMemoryNode(store, input.nodeId);
-        if (!node || node.node.status !== "active") {
-          return {
-            status: "not_found",
-            action: "memory_mark_context",
-            message: `Active memory node '${input.nodeId}' was not found.`,
-            frameFile: paths.frameFile
-          };
-        }
-      }
-      const timestamp = nowIso3();
-      frame.markers = frame.markers.filter(
-        (marker) => !targets.some((target) => sameContextTarget(marker, target))
-      );
-      const created = targets.map(
-        (target) => createMarker(
-          markerId(),
-          target,
-          input.status,
-          input.status === "memorized" ? input.nodeId : void 0,
-          timestamp
-        )
-      );
-      frame.markers.push(...created);
-      frame.version += 1;
-      frame.updatedAt = timestamp;
-      await writeFrame(frame);
-      return {
-        status: "ok",
-        action: "memory_mark_context",
-        version: frame.version,
-        markers: created,
-        frameFile: paths.frameFile
-      };
-    },
-    async memoryUnmarkContext(input) {
-      const config2 = await readConfig();
-      const frame = await readFrame(config2);
-      const targets = contextTargets(input.refs, void 0);
-      const markerIds = new Set(input.markerIds ?? []);
-      if (targets.length === 0 && markerIds.size === 0) {
-        return {
-          status: "invalid",
-          action: "memory_unmark_context",
-          message: "At least one marker id or ref is required.",
-          frameFile: paths.frameFile
-        };
-      }
-      const before = frame.markers.length;
-      frame.markers = frame.markers.filter((marker) => {
-        if (markerIds.has(marker.id)) return false;
-        return !targets.some((target) => sameContextTarget(marker, target));
-      });
-      const removed = before - frame.markers.length;
-      if (removed > 0) {
-        frame.version += 1;
-        frame.updatedAt = nowIso3();
-        await writeFrame(frame);
-      }
-      return {
-        status: "ok",
-        action: "memory_unmark_context",
-        version: frame.version,
-        removed,
-        frameFile: paths.frameFile
-      };
-    },
-    async memoryReadContextFrame() {
-      const config2 = await readConfig();
-      const frame = await readFrame(config2);
-      return {
-        status: "ok",
-        action: "memory_read_context_frame",
-        version: frame.version,
-        markers: frame.markers,
-        temporaryWorkspace: frame.lastWorkspace,
-        frameFile: paths.frameFile,
-        configFile: paths.configFile
-      };
-    },
-    async memoryMaintainContext(input) {
+    async memoryApply(input) {
       const config2 = await readConfig();
       const store = await readStore(config2);
       const frame = await readFrame(config2);
@@ -29367,52 +29144,123 @@ function createMemoryArborTools(options = {}) {
       }
       return {
         ...publicPayload,
-        version: store.version,
+        action: "memory_apply",
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        storeVersion: store.version,
+        frameVersion: frame.version
+      };
+    },
+    async memoryStatus() {
+      const config2 = await readConfig();
+      const store = await readStore(config2);
+      const frame = await readFrame(config2);
+      return {
+        status: "ok",
+        action: "memory_status",
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        storeVersion: store.version,
         frameVersion: frame.version,
-        ...paths
+        slots: readMemorySlots(store),
+        contextFrame: frame
+      };
+    },
+    async memoryAdmin(input) {
+      if (input.action === "archive") {
+        if (!input.id) return invalidAdminInput(input.action, "id is required.");
+        return updateStore((store) => {
+          const archived = archiveMemoryNode(store, input.id);
+          if (archived.status !== "ok") {
+            return {
+              status: archived.status,
+              action: "memory_admin",
+              operation: input.action,
+              message: archived.message,
+              changed: false
+            };
+          }
+          return {
+            status: "ok",
+            action: "memory_admin",
+            operation: input.action,
+            ...archived.value
+          };
+        });
+      }
+      if (input.action === "move") {
+        if (!input.id || !input.newParentId) {
+          return invalidAdminInput(input.action, "id and newParentId are required.");
+        }
+        return updateStore((store) => {
+          const moved = moveMemoryNode(store, input.id, input.newParentId);
+          if (moved.status !== "ok") {
+            return {
+              status: moved.status,
+              action: "memory_admin",
+              operation: input.action,
+              message: moved.message,
+              changed: false
+            };
+          }
+          return {
+            status: "ok",
+            action: "memory_admin",
+            operation: input.action,
+            node: moved.value
+          };
+        });
+      }
+      const config2 = await readConfig();
+      const frame = await readFrame(config2);
+      const markerIds = new Set(input.markerIds ?? []);
+      const targets = contextTargets(input.refs);
+      if (markerIds.size === 0 && targets.length === 0) {
+        return {
+          status: "invalid",
+          action: "memory_admin",
+          operation: input.action,
+          message: "At least one marker id or ref is required.",
+          interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION
+        };
+      }
+      const before = frame.markers.length;
+      frame.markers = frame.markers.filter(
+        (marker) => !markerIds.has(marker.id) && !targets.some((target) => sameContextTarget(marker, target))
+      );
+      const removed = before - frame.markers.length;
+      if (removed > 0) {
+        frame.version += 1;
+        frame.updatedAt = nowIso3();
+        await writeFrame(frame);
+      }
+      return {
+        status: "ok",
+        action: "memory_admin",
+        operation: input.action,
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        frameVersion: frame.version,
+        removed
       };
     }
   };
 }
-function contextTargets(refs, ranges) {
+function invalidAdminInput(operation, message) {
+  return {
+    status: "invalid",
+    action: "memory_admin",
+    operation,
+    message,
+    interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION
+  };
+}
+function contextTargets(refs) {
   const targets = [];
   for (const ref of refs ?? []) {
     const parsed = parseContextRef(ref);
     if (parsed) targets.push(parsed);
   }
-  for (const range of ranges ?? []) {
-    if (!Number.isInteger(range.start) || !Number.isInteger(range.end) || range.end <= range.start)
-      continue;
-    const parsed = parseContextRef(range.ref);
-    if (!parsed) continue;
-    targets.push({
-      sourceKey: parsed.sourceKey,
-      range: {
-        start: range.start,
-        end: range.end
-      }
-    });
-  }
-  return uniqueTargets(targets);
-}
-function uniqueTargets(targets) {
-  const unique2 = [];
-  for (const target of targets) {
-    if (!unique2.some((candidate) => sameContextTarget(candidate, target)))
-      unique2.push(target);
-  }
-  return unique2;
-}
-function createMarker(id, target, status, nodeId, timestamp) {
-  return {
-    id,
-    sourceKey: target.sourceKey,
-    status,
-    nodeId,
-    range: target.range,
-    createdAt: timestamp,
-    updatedAt: timestamp
-  };
+  return targets.filter(
+    (target, index) => !targets.slice(0, index).some((candidate) => sameContextTarget(candidate, target))
+  );
 }
 function hasCode(error2, code) {
   return typeof error2 === "object" && error2 !== null && "code" in error2 && error2.code === code;
@@ -29430,7 +29278,6 @@ function nowIso3() {
 // packages/mcp/src/server.ts
 var NODE_KINDS = ["root", "branch", "leaf"];
 var NODE_STATUSES = ["active", "archived"];
-var MARKER_STATUSES = ["memorized", "discarded"];
 var LOAD_MODES = ["replace", "append"];
 var memory = createMemoryArborTools();
 function mcpResult(payload) {
@@ -29448,162 +29295,23 @@ var server = new McpServer({
   version: "0.4.2"
 });
 server.registerTool(
-  "memory_create_node",
+  "memory_query",
   {
-    description: "Create one Memory Arbor node in the host-independent memory tree.",
-    inputSchema: {
-      title: external_exports.string().min(1).describe("Short memory node title."),
-      summary: external_exports.string().optional().describe("Short summary. Defaults to a content/title summary."),
-      content: external_exports.string().optional().describe("Detailed memory content."),
-      tags: external_exports.array(external_exports.string()).optional().describe("Search tags."),
-      parentId: external_exports.string().optional().describe("Parent node id. Defaults to root."),
-      nodeKind: external_exports.enum(NODE_KINDS).optional().describe("Node kind. Defaults to leaf."),
-      sourceRefs: external_exports.array(external_exports.string()).optional().describe("Optional source references.")
-    }
-  },
-  async (input) => mcpResult(await memory.memoryCreateNode(input))
-);
-server.registerTool(
-  "memory_load_slot",
-  {
-    description: "Load active Memory Arbor nodes into a configured memory slot for future prompt-frame projection.",
-    inputSchema: {
-      slot: external_exports.string().min(1).describe("Configured slot name."),
-      nodeIds: external_exports.array(external_exports.string().min(1)).min(1).describe("Active memory node ids to load."),
-      mode: external_exports.enum(LOAD_MODES).optional().describe("Load mode. Defaults to replace.")
-    }
-  },
-  async ({ slot, nodeIds, mode }) => {
-    return mcpResult(
-      await memory.memoryLoadSlot({
-        slot,
-        nodeIds,
-        mode
-      })
-    );
-  }
-);
-server.registerTool(
-  "memory_read_slots",
-  {
-    description: "Read configured Memory Arbor slots and their loaded active memory nodes."
-  },
-  async () => {
-    return mcpResult(await memory.memoryReadSlots());
-  }
-);
-server.registerTool(
-  "memory_search",
-  {
-    description: "Search active or archived Memory Arbor nodes by query, tag and status.",
+    description: "Search Memory Arbor nodes and optionally open selected results in the same call.",
     inputSchema: {
       query: external_exports.string().optional(),
       tag: external_exports.string().optional(),
       status: external_exports.enum(NODE_STATUSES).optional(),
-      limit: external_exports.number().int().positive().optional()
+      limit: external_exports.number().int().positive().optional(),
+      openIds: external_exports.array(external_exports.string()).optional()
     }
   },
-  async ({ query, tag, status, limit }) => {
-    return mcpResult(
-      await memory.memorySearch({
-        query,
-        tag,
-        status,
-        limit
-      })
-    );
-  }
+  async (input) => mcpResult(await memory.memoryQuery(input))
 );
 server.registerTool(
-  "memory_open",
+  "memory_apply",
   {
-    description: "Open one memory node and return its breadcrumb, tree path, and child directory.",
-    inputSchema: {
-      id: external_exports.string().min(1).describe("Memory node id.")
-    }
-  },
-  async ({ id }) => mcpResult(await memory.memoryOpen(id))
-);
-server.registerTool(
-  "memory_update_node",
-  {
-    description: "Update one memory node. Omitted fields are left unchanged.",
-    inputSchema: {
-      id: external_exports.string().min(1).describe("Memory node id."),
-      title: external_exports.string().min(1).optional().describe("Replacement title."),
-      summary: external_exports.string().min(1).optional().describe("Replacement summary."),
-      content: external_exports.string().min(1).optional().describe("Replacement content."),
-      tags: external_exports.array(external_exports.string()).optional().describe("Replacement tags."),
-      nodeKind: external_exports.enum(NODE_KINDS).optional().describe("Replacement node kind."),
-      sourceRefs: external_exports.array(external_exports.string()).optional().describe("Replacement source references.")
-    }
-  },
-  async (input) => mcpResult(await memory.memoryUpdateNode(input))
-);
-server.registerTool(
-  "memory_archive_node",
-  {
-    description: "Archive one memory node subtree and remove archived nodes from all loaded slots.",
-    inputSchema: {
-      id: external_exports.string().min(1).describe("Memory node id.")
-    }
-  },
-  async ({ id }) => mcpResult(await memory.memoryArchiveNode(id))
-);
-server.registerTool(
-  "memory_move_node",
-  {
-    description: "Move one memory node under a new active parent node.",
-    inputSchema: {
-      id: external_exports.string().min(1).describe("Memory node id."),
-      newParentId: external_exports.string().min(1).describe("New parent node id.")
-    }
-  },
-  async (input) => mcpResult(await memory.memoryMoveNode(input))
-);
-server.registerTool(
-  "memory_mark_context",
-  {
-    description: "Mark temporary workspace refs as memorized or discarded in the external context frame store.",
-    inputSchema: {
-      refs: external_exports.array(external_exports.string()).optional().describe(
-        "Temporary workspace refs to mark. A ref may be a full part or sourceKey@start:end."
-      ),
-      ranges: external_exports.array(
-        external_exports.object({
-          ref: external_exports.string().min(1).describe("Temporary workspace ref or source key."),
-          start: external_exports.number().int().nonnegative().describe("Original text start offset."),
-          end: external_exports.number().int().positive().describe("Original text end offset.")
-        })
-      ).optional().describe("Explicit text ranges to mark."),
-      status: external_exports.enum(MARKER_STATUSES).describe("Marker status."),
-      nodeId: external_exports.string().optional().describe("Required when status is memorized.")
-    }
-  },
-  async (input) => mcpResult(await memory.memoryMarkContext(input))
-);
-server.registerTool(
-  "memory_unmark_context",
-  {
-    description: "Remove external context markers by marker id or temporary workspace ref.",
-    inputSchema: {
-      markerIds: external_exports.array(external_exports.string()).optional().describe("Marker ids returned by memory_read_context_frame."),
-      refs: external_exports.array(external_exports.string()).optional().describe("Refs or sourceKey@start:end targets to unmark.")
-    }
-  },
-  async (input) => mcpResult(await memory.memoryUnmarkContext(input))
-);
-server.registerTool(
-  "memory_read_context_frame",
-  {
-    description: "Read external context frame state, markers, recent temporary workspace refs, and pressure status."
-  },
-  async () => mcpResult(await memory.memoryReadContextFrame())
-);
-server.registerTool(
-  "memory_maintain_context",
-  {
-    description: "Deterministically batch memory node create/update, context marking, slot loading, and ref discarding.",
+    description: "Create or update memory, mark refs as memorized, discard refs, and load slots in one apply operation.",
     inputSchema: {
       createNodes: external_exports.array(
         external_exports.object({
@@ -29643,7 +29351,28 @@ server.registerTool(
       ).optional().describe("Explicit slot load operations.")
     }
   },
-  async (input) => mcpResult(await memory.memoryMaintainContext(input))
+  async (input) => mcpResult(await memory.memoryApply(input))
+);
+server.registerTool(
+  "memory_status",
+  {
+    description: "Read current slots, context frame, temporary workspace pressure, and state versions."
+  },
+  async () => mcpResult(await memory.memoryStatus())
+);
+server.registerTool(
+  "memory_admin",
+  {
+    description: "Perform a low-frequency repair: archive a node, move a node, or unmark context refs.",
+    inputSchema: {
+      action: external_exports.enum(["archive", "move", "unmark"]),
+      id: external_exports.string().optional(),
+      newParentId: external_exports.string().optional(),
+      markerIds: external_exports.array(external_exports.string()).optional(),
+      refs: external_exports.array(external_exports.string()).optional()
+    }
+  },
+  async (input) => mcpResult(await memory.memoryAdmin(input))
 );
 var transport = new StdioServerTransport();
 await server.connect(transport);

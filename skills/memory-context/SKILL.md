@@ -1,6 +1,6 @@
 ---
 name: memory-context
-description: Use Memory Arbor context when it is injected by the host adapter; use memory_* tools only when the current host exposes them.
+description: Use Memory Arbor context when it is injected by the host adapter; use the four high-level memory tools only when the current host exposes them.
 ---
 
 # Memory Context
@@ -14,20 +14,12 @@ If a `<memory_arbor_prompt_frame>` or `<memory_frame>` is present, treat it as e
 
 ## Tools
 
-Only follow this section when the current session actually exposes `memory_*` tools.
+Only follow this section when the current session actually exposes all four high-level tools.
 
-- Use `memory_search` before creating likely duplicates or when prior context may matter.
-- Use `memory_open` to inspect a node, its breadcrumb, tree path, and children.
-- Use `memory_create_node` to add a new memory node.
-- Use `memory_update_node` to revise an existing memory node.
-- Use `memory_archive_node` to archive obsolete or wrong memory.
-- Use `memory_move_node` to relocate a node under a better parent.
-- Use `memory_load_slot` to make active nodes visible in the memory frame.
-- Use `memory_read_slots` to verify loaded slots.
-- Use `memory_maintain_context` first when temporary workspace pressure requires batching create/update, mark, discard, and load operations.
-- Use `memory_read_context_frame` to inspect marker state, temporary refs, and workspace pressure.
-- Use `memory_mark_context` after memory creation/update to mark old temporary refs as `memorized`, or mark useless refs as `discarded`.
-- Use `memory_unmark_context` to undo a wrong marker.
+- Use `memory_query` to search memory and, when needed, expand selected results with `openIds`.
+- Use `memory_apply` to create or update nodes, mark useful refs as memorized, discard useless refs, and load slots.
+- Use `memory_status` to inspect loaded slots, the context frame, temporary workspace pressure, and versions.
+- Use `memory_admin` only for low-frequency repairs: archive, move, or unmark.
 
 ## Slots
 
@@ -45,10 +37,10 @@ Default slots are:
 - Use branch nodes for navigation summaries and leaf nodes for concrete memory.
 - Do not store raw dialogue unless the user explicitly wants that; summarize durable facts instead.
 - In prompt hook mode, do not attempt to create, update, archive, load, mark, or verify memory through unavailable tools.
-- When the memory frame or system prompt reports temporary workspace pressure, prefer `memory_maintain_context`.
-- For useful older refs, create or update memory nodes through `memory_maintain_context` and include those refs in `markRefs`.
-- If an old temporary ref is useless, put it in `discardRefs` through `memory_maintain_context`.
-- Use `memory_mark_context` only when a smaller, single-purpose marker edit is clearer.
+- Use `memory_query` before `memory_apply` when prior memory may matter or a duplicate is possible.
+- When the memory frame or system prompt reports temporary workspace pressure, use `memory_apply`.
+- For useful older refs, create or update memory nodes through `memory_apply` and include those refs in `markRefs`.
+- If an old temporary ref is useless, put it in `discardRefs` through `memory_apply`.
 - Do not mark the latest user message unless the user explicitly asks.
-- After creating or updating memory that should affect future answers, call `memory_load_slot`.
-- When visibility matters, call `memory_read_context_frame` or `memory_read_slots` after changing memory or markers.
+- After creating or updating memory that should affect future answers, load a slot through `memory_apply`.
+- When visibility matters, call `memory_status` after changing memory or markers.

@@ -98,7 +98,7 @@ test("maintenance prompt appears only under workspace pressure", () => {
   const pressurePrompt = buildMemoryMaintenancePrompt(pressureFrame, {
     storeVersion: 1,
   });
-  assert.match(pressurePrompt ?? "", /memory_maintain_context/);
+  assert.match(pressurePrompt ?? "", /memory_apply/);
   assert.match(pressurePrompt ?? "", /opencode:s:m:p2/);
 
   const normalFrame: ContextFrameStore = {
@@ -114,7 +114,7 @@ test("maintenance prompt appears only under workspace pressure", () => {
   assert.equal(buildMemoryMaintenancePrompt(normalFrame), null);
 });
 
-test("memory_maintain_context batches create, update, discard, and load operations", () => {
+test("memory_apply batches create, update, discard, and load operations", () => {
   const timestamp = "2026-01-01T00:00:00.000Z";
   const config = defaultMemoryConfig();
   config.temporaryWorkspace.maxTokens = 3;
@@ -216,7 +216,7 @@ test("memory_maintain_context batches create, update, discard, and load operatio
       updateNodes: [
         {
           id: "adapter-smoke",
-          content: "Updated through memory_maintain_context.",
+          content: "Updated through memory_apply.",
           markRefs: [updateProjection.refs[0].ref],
           loadSlot: "task_state",
         },
@@ -265,7 +265,7 @@ test("memory_maintain_context batches create, update, discard, and load operatio
   );
 });
 
-test("memory_maintain_context rejects invalid input without mutation", () => {
+test("memory_apply rejects invalid input without mutation", () => {
   const timestamp = "2026-01-01T00:00:00.000Z";
   const config = defaultMemoryConfig();
   const store = createEmptyMemoryStore(config, timestamp);

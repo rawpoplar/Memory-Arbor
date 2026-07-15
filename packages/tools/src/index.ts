@@ -4,28 +4,21 @@ import { dirname, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
   archiveMemoryNode,
-  createMemoryNode,
-  loadMemorySlot,
   moveMemoryNode,
   normalizeMemoryConfig,
   normalizeMemoryStore,
   openMemoryNode,
   readMemorySlots,
   searchMemoryNodes,
-  updateMemoryNode,
   type MemoryConfig,
-  type MemoryCreateNodeInput,
   type MemoryNodeStatus,
   type MemoryStore,
-  type MemoryUpdateNodeInput,
 } from "@rawpoplar/memory-arbor-core";
 import {
   normalizeContextFrameStore,
   parseContextRef,
   sameContextTarget,
   type ContextFrameStore,
-  type ContextMarker,
-  type ContextMarkerStatus,
   type ContextRange,
 } from "@rawpoplar/memory-arbor-context";
 import {
@@ -35,7 +28,7 @@ import {
 
 export * from "./maintain.ts";
 
-export type MemoryLoadMode = "replace" | "append";
+export const INTERACTION_PROTOCOL_VERSION = 1;
 
 export type MemorySearchInput = {
   query?: string;
@@ -44,29 +37,16 @@ export type MemorySearchInput = {
   limit?: number;
 };
 
-export type MemoryMoveNodeInput = {
-  id: string;
-  newParentId: string;
+export type MemoryQueryInput = MemorySearchInput & {
+  openIds?: string[];
 };
 
-export type MemoryLoadSlotInput = {
-  slot: string;
-  nodeIds: string[];
-  mode?: MemoryLoadMode;
-};
+export type MemoryApplyInput = MaintainContextInput;
 
-export type MemoryMarkContextInput = {
-  refs?: string[];
-  ranges?: Array<{
-    ref: string;
-    start: number;
-    end: number;
-  }>;
-  status: ContextMarkerStatus;
-  nodeId?: string;
-};
-
-export type MemoryUnmarkContextInput = {
+export type MemoryAdminInput = {
+  action: "archive" | "move" | "unmark";
+  id?: string;
+  newParentId?: string;
   markerIds?: string[];
   refs?: string[];
 };
@@ -153,8 +133,8 @@ export function createMemoryArborTools(
     }
     return {
       ...publicPayload,
-      version: store.version,
-      ...paths,
+      interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+      storeVersion: store.version,
     };
   }
 
@@ -166,265 +146,24 @@ export function createMemoryArborTools(
     writeStore,
     writeFrame,
 
-    async memoryCreateNode(input: MemoryCreateNodeInput): Promise<ToolPayload> {
-      return updateStore((store) => {
-        const created = createMemoryNode(store, input, { id: memoryId() });
-        if (created.status !== "ok") {
-          return {
-            status: created.status,
-            action: "memory_create_node",
-            message: created.message,
-            changed: false,
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_create_node",
-          node: created.value,
-        };
-      });
-    },
-
-    async memorySearch(input: MemorySearchInput): Promise<ToolPayload> {
+    async memoryQuery(input: MemoryQueryInput): Promise<ToolPayload> {
       const config = await readConfig();
       const store = await readStore(config);
       return {
         status: "ok",
-        action: "memory_search",
-        version: store.version,
+        action: "memory_query",
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        storeVersion: store.version,
         nodes: searchMemoryNodes(store, input.query ?? "", {
           tag: input.tag,
           status: input.status,
           limit: input.limit,
         }),
+        opened: (input.openIds ?? []).map((id) => openMemoryNode(store, id)),
       };
     },
 
-    async memoryOpen(id: string): Promise<ToolPayload> {
-      const config = await readConfig();
-      const store = await readStore(config);
-      const view = openMemoryNode(store, id);
-      return {
-        status: view ? "ok" : "not_found",
-        action: "memory_open",
-        version: store.version,
-        view,
-      };
-    },
-
-    async memoryUpdateNode(input: MemoryUpdateNodeInput): Promise<ToolPayload> {
-      return updateStore((store) => {
-        const updated = updateMemoryNode(store, input.id, {
-          title: input.title,
-          summary: input.summary,
-          content: input.content,
-          tags: input.tags,
-          nodeKind: input.nodeKind,
-          sourceRefs: input.sourceRefs,
-        });
-        if (updated.status !== "ok") {
-          return {
-            status: updated.status,
-            action: "memory_update_node",
-            message: updated.message,
-            changed: false,
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_update_node",
-          node: updated.value,
-        };
-      });
-    },
-
-    async memoryArchiveNode(id: string): Promise<ToolPayload> {
-      return updateStore((store) => {
-        const archived = archiveMemoryNode(store, id);
-        if (archived.status !== "ok") {
-          return {
-            status: archived.status,
-            action: "memory_archive_node",
-            message: archived.message,
-            changed: false,
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_archive_node",
-          ...archived.value,
-        };
-      });
-    },
-
-    async memoryMoveNode(input: MemoryMoveNodeInput): Promise<ToolPayload> {
-      return updateStore((store) => {
-        const moved = moveMemoryNode(store, input.id, input.newParentId);
-        if (moved.status !== "ok") {
-          return {
-            status: moved.status,
-            action: "memory_move_node",
-            message: moved.message,
-            changed: false,
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_move_node",
-          node: moved.value,
-        };
-      });
-    },
-
-    async memoryLoadSlot(input: MemoryLoadSlotInput): Promise<ToolPayload> {
-      return updateStore((store) => {
-        const loaded = loadMemorySlot(
-          store,
-          input.slot,
-          input.nodeIds,
-          input.mode ?? "replace",
-        );
-        if (loaded.status !== "ok") {
-          return {
-            status: loaded.status,
-            action: "memory_load_slot",
-            message: loaded.message,
-            changed: false,
-          };
-        }
-        return {
-          status: "ok",
-          action: "memory_load_slot",
-          slot: loaded.value,
-        };
-      });
-    },
-
-    async memoryReadSlots(): Promise<ToolPayload> {
-      const config = await readConfig();
-      const store = await readStore(config);
-      return {
-        status: "ok",
-        action: "memory_read_slots",
-        version: store.version,
-        slots: readMemorySlots(store),
-        ...paths,
-      };
-    },
-
-    async memoryMarkContext(input: MemoryMarkContextInput): Promise<ToolPayload> {
-      const config = await readConfig();
-      const store = await readStore(config);
-      const frame = await readFrame(config);
-      const targets = contextTargets(input.refs, input.ranges);
-
-      if (targets.length === 0) {
-        return {
-          status: "invalid",
-          action: "memory_mark_context",
-          message: "At least one valid ref or range is required.",
-          frameFile: paths.frameFile,
-        };
-      }
-
-      if (input.status === "memorized") {
-        if (!input.nodeId) {
-          return {
-            status: "invalid",
-            action: "memory_mark_context",
-            message: "nodeId is required when status is memorized.",
-            frameFile: paths.frameFile,
-          };
-        }
-        const node = openMemoryNode(store, input.nodeId);
-        if (!node || node.node.status !== "active") {
-          return {
-            status: "not_found",
-            action: "memory_mark_context",
-            message: `Active memory node '${input.nodeId}' was not found.`,
-            frameFile: paths.frameFile,
-          };
-        }
-      }
-
-      const timestamp = nowIso();
-      frame.markers = frame.markers.filter(
-        (marker) => !targets.some((target) => sameContextTarget(marker, target)),
-      );
-      const created = targets.map((target) =>
-        createMarker(
-          markerId(),
-          target,
-          input.status,
-          input.status === "memorized" ? input.nodeId : undefined,
-          timestamp,
-        ),
-      );
-      frame.markers.push(...created);
-      frame.version += 1;
-      frame.updatedAt = timestamp;
-      await writeFrame(frame);
-
-      return {
-        status: "ok",
-        action: "memory_mark_context",
-        version: frame.version,
-        markers: created,
-        frameFile: paths.frameFile,
-      };
-    },
-
-    async memoryUnmarkContext(input: MemoryUnmarkContextInput): Promise<ToolPayload> {
-      const config = await readConfig();
-      const frame = await readFrame(config);
-      const targets = contextTargets(input.refs, undefined);
-      const markerIds = new Set(input.markerIds ?? []);
-
-      if (targets.length === 0 && markerIds.size === 0) {
-        return {
-          status: "invalid",
-          action: "memory_unmark_context",
-          message: "At least one marker id or ref is required.",
-          frameFile: paths.frameFile,
-        };
-      }
-
-      const before = frame.markers.length;
-      frame.markers = frame.markers.filter((marker) => {
-        if (markerIds.has(marker.id)) return false;
-        return !targets.some((target) => sameContextTarget(marker, target));
-      });
-      const removed = before - frame.markers.length;
-      if (removed > 0) {
-        frame.version += 1;
-        frame.updatedAt = nowIso();
-        await writeFrame(frame);
-      }
-
-      return {
-        status: "ok",
-        action: "memory_unmark_context",
-        version: frame.version,
-        removed,
-        frameFile: paths.frameFile,
-      };
-    },
-
-    async memoryReadContextFrame(): Promise<ToolPayload> {
-      const config = await readConfig();
-      const frame = await readFrame(config);
-      return {
-        status: "ok",
-        action: "memory_read_context_frame",
-        version: frame.version,
-        markers: frame.markers,
-        temporaryWorkspace: frame.lastWorkspace,
-        frameFile: paths.frameFile,
-        configFile: paths.configFile,
-      };
-    },
-
-    async memoryMaintainContext(input: MaintainContextInput): Promise<ToolPayload> {
+    async memoryApply(input: MemoryApplyInput): Promise<ToolPayload> {
       const config = await readConfig();
       const store = await readStore(config);
       const frame = await readFrame(config);
@@ -442,68 +181,133 @@ export function createMemoryArborTools(
 
       return {
         ...publicPayload,
-        version: store.version,
+        action: "memory_apply",
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        storeVersion: store.version,
         frameVersion: frame.version,
-        ...paths,
+      };
+    },
+
+    async memoryStatus(): Promise<ToolPayload> {
+      const config = await readConfig();
+      const store = await readStore(config);
+      const frame = await readFrame(config);
+      return {
+        status: "ok",
+        action: "memory_status",
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        storeVersion: store.version,
+        frameVersion: frame.version,
+        slots: readMemorySlots(store),
+        contextFrame: frame,
+      };
+    },
+
+    async memoryAdmin(input: MemoryAdminInput): Promise<ToolPayload> {
+      if (input.action === "archive") {
+        if (!input.id) return invalidAdminInput(input.action, "id is required.");
+        return updateStore((store) => {
+          const archived = archiveMemoryNode(store, input.id);
+          if (archived.status !== "ok") {
+            return {
+              status: archived.status,
+              action: "memory_admin",
+              operation: input.action,
+              message: archived.message,
+              changed: false,
+            };
+          }
+          return {
+            status: "ok",
+            action: "memory_admin",
+            operation: input.action,
+            ...archived.value,
+          };
+        });
+      }
+
+      if (input.action === "move") {
+        if (!input.id || !input.newParentId) {
+          return invalidAdminInput(input.action, "id and newParentId are required.");
+        }
+        return updateStore((store) => {
+          const moved = moveMemoryNode(store, input.id, input.newParentId);
+          if (moved.status !== "ok") {
+            return {
+              status: moved.status,
+              action: "memory_admin",
+              operation: input.action,
+              message: moved.message,
+              changed: false,
+            };
+          }
+          return {
+            status: "ok",
+            action: "memory_admin",
+            operation: input.action,
+            node: moved.value,
+          };
+        });
+      }
+
+      const config = await readConfig();
+      const frame = await readFrame(config);
+      const markerIds = new Set(input.markerIds ?? []);
+      const targets = contextTargets(input.refs);
+      if (markerIds.size === 0 && targets.length === 0) {
+        return {
+          status: "invalid",
+          action: "memory_admin",
+          operation: input.action,
+          message: "At least one marker id or ref is required.",
+          interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        };
+      }
+
+      const before = frame.markers.length;
+      frame.markers = frame.markers.filter(
+        (marker) =>
+          !markerIds.has(marker.id) &&
+          !targets.some((target) => sameContextTarget(marker, target)),
+      );
+      const removed = before - frame.markers.length;
+      if (removed > 0) {
+        frame.version += 1;
+        frame.updatedAt = nowIso();
+        await writeFrame(frame);
+      }
+      return {
+        status: "ok",
+        action: "memory_admin",
+        operation: input.action,
+        interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+        frameVersion: frame.version,
+        removed,
       };
     },
   };
 }
 
-function contextTargets(
-  refs: string[] | undefined,
-  ranges: Array<{ ref: string; start: number; end: number }> | undefined,
-): ContextTarget[] {
+function invalidAdminInput(operation: string, message: string): ToolPayload {
+  return {
+    status: "invalid",
+    action: "memory_admin",
+    operation,
+    message,
+    interactionProtocolVersion: INTERACTION_PROTOCOL_VERSION,
+  };
+}
+
+function contextTargets(refs: string[] | undefined): ContextTarget[] {
   const targets: ContextTarget[] = [];
   for (const ref of refs ?? []) {
     const parsed = parseContextRef(ref);
     if (parsed) targets.push(parsed);
   }
-  for (const range of ranges ?? []) {
-    if (
-      !Number.isInteger(range.start) ||
-      !Number.isInteger(range.end) ||
-      range.end <= range.start
-    )
-      continue;
-    const parsed = parseContextRef(range.ref);
-    if (!parsed) continue;
-    targets.push({
-      sourceKey: parsed.sourceKey,
-      range: {
-        start: range.start,
-        end: range.end,
-      },
-    });
-  }
-  return uniqueTargets(targets);
-}
-
-function uniqueTargets(targets: ContextTarget[]): ContextTarget[] {
-  const unique: ContextTarget[] = [];
-  for (const target of targets) {
-    if (!unique.some((candidate) => sameContextTarget(candidate, target)))
-      unique.push(target);
-  }
-  return unique;
-}
-
-function createMarker(
-  id: string,
-  target: ContextTarget,
-  status: ContextMarkerStatus,
-  nodeId: string | undefined,
-  timestamp: string,
-): ContextMarker {
-  return {
-    id,
-    sourceKey: target.sourceKey,
-    status,
-    nodeId,
-    range: target.range,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
+  return targets.filter(
+    (target, index) =>
+      !targets.slice(0, index).some((candidate) => sameContextTarget(candidate, target)),
+  );
 }
 
 function hasCode(error: unknown, code: string): boolean {
