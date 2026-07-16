@@ -5,6 +5,7 @@ const rootSkill = join("skills", "memory-context", "SKILL.md");
 const targets = [
   join("plugins", "codex", "skills", "memory-context", "SKILL.md"),
   join("plugins", "claude-code", "skills", "memory-context", "SKILL.md"),
+  join(".opencode", "skills", "memory-context", "SKILL.md"),
 ];
 
 const notice =
